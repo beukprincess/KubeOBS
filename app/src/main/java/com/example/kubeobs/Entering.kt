@@ -4,6 +4,11 @@ import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntOffsetAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -59,10 +64,23 @@ fun EnteringScreen(navController: NavController){
         } else {
             IntOffset.Zero
         },
+        animationSpec = tween(durationMillis = 500),
         label = "offset"
     )
 
-    AnimatedVisibility(!isSignUpDisplays) {
+    AnimatedVisibility(
+        visible = !isSignUpDisplays,
+        enter = fadeIn(
+            animationSpec = tween(durationMillis = 500)
+        ) + expandVertically(
+            animationSpec = tween(durationMillis = 500)
+        ),
+        exit = fadeOut(
+            animationSpec = tween(durationMillis = 500)
+        ) + shrinkVertically(
+            animationSpec = tween(durationMillis = 500)
+        )
+    ) {
         val username: TextFieldState = rememberTextFieldState()
         val password: TextFieldState = rememberTextFieldState()
         Column(
@@ -155,7 +173,19 @@ fun EnteringScreen(navController: NavController){
             }
         }
     }
-    AnimatedVisibility(isSignUpDisplays) {
+    AnimatedVisibility(
+        visible = isSignUpDisplays,
+        enter = fadeIn(
+            animationSpec = tween(durationMillis = 500)
+        ) + expandVertically(
+            animationSpec = tween(durationMillis = 500)
+        ),
+        exit = fadeOut(
+            animationSpec = tween(durationMillis = 500)
+        ) + shrinkVertically(
+            animationSpec = tween(durationMillis = 500)
+        )
+    ) {
         val username: TextFieldState = rememberTextFieldState()
         val password: TextFieldState = rememberTextFieldState()
 

@@ -49,12 +49,17 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlin.math.roundToInt
-
+import android.os.Handler
+import android.os.Looper
 
 @Composable
 fun EnteringScreen(navController: NavController){
     var isSignUpDisplays by remember { mutableStateOf(false) }
+    val slideDur: Int = 500
+    val visibilityDur: Int = 1000
     val pxToMove = with(LocalDensity.current) {
         1000.dp.toPx().roundToInt()
     }
@@ -64,21 +69,29 @@ fun EnteringScreen(navController: NavController){
         } else {
             IntOffset.Zero
         },
-        animationSpec = tween(durationMillis = 500),
+        animationSpec = tween(durationMillis = slideDur),
         label = "offset"
     )
-
+    val offsetA by animateIntOffsetAsState(
+        targetValue = if (!isSignUpDisplays) {
+            IntOffset(0, pxToMove)
+        } else {
+            IntOffset.Zero
+        },
+        animationSpec = tween(durationMillis = slideDur),
+        label = "offsetA"
+    )
     AnimatedVisibility(
         visible = !isSignUpDisplays,
         enter = fadeIn(
-            animationSpec = tween(durationMillis = 500)
+            animationSpec = tween(durationMillis = visibilityDur)
         ) + expandVertically(
-            animationSpec = tween(durationMillis = 500)
+            animationSpec = tween(durationMillis = visibilityDur)
         ),
         exit = fadeOut(
-            animationSpec = tween(durationMillis = 500)
+            animationSpec = tween(durationMillis = visibilityDur)
         ) + shrinkVertically(
-            animationSpec = tween(durationMillis = 500)
+            animationSpec = tween(durationMillis = visibilityDur)
         )
     ) {
         val username: TextFieldState = rememberTextFieldState()
@@ -176,14 +189,14 @@ fun EnteringScreen(navController: NavController){
     AnimatedVisibility(
         visible = isSignUpDisplays,
         enter = fadeIn(
-            animationSpec = tween(durationMillis = 500)
+            animationSpec = tween(durationMillis = visibilityDur)
         ) + expandVertically(
-            animationSpec = tween(durationMillis = 500)
+            animationSpec = tween(durationMillis = visibilityDur)
         ),
         exit = fadeOut(
-            animationSpec = tween(durationMillis = 500)
+            animationSpec = tween(durationMillis = visibilityDur)
         ) + shrinkVertically(
-            animationSpec = tween(durationMillis = 500)
+            animationSpec = tween(durationMillis = visibilityDur)
         )
     ) {
         val username: TextFieldState = rememberTextFieldState()
@@ -191,6 +204,9 @@ fun EnteringScreen(navController: NavController){
 
         Column(
             modifier = Modifier
+                .offset{
+                    offsetA
+                }
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

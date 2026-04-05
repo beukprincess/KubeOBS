@@ -1,19 +1,15 @@
 package com.example.kubeobs
 
-import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntOffsetAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
@@ -29,10 +26,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -49,11 +43,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlin.math.roundToInt
-import android.os.Handler
-import android.os.Looper
 
 @Composable
 fun EnteringScreen(navController: NavController){
@@ -201,7 +192,8 @@ fun EnteringScreen(navController: NavController){
     ) {
         val username: TextFieldState = rememberTextFieldState()
         val password: TextFieldState = rememberTextFieldState()
-
+        val validationPassword: TextFieldState = rememberTextFieldState()
+        var adviceText: String by remember { mutableStateOf("Confirm your password") }
         Column(
             modifier = Modifier
                 .offset{
@@ -254,6 +246,31 @@ fun EnteringScreen(navController: NavController){
                 Spacer(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .height(5.dp)
+                )
+                Row(
+                    modifier = Modifier.width(OutlinedTextFieldDefaults.MinWidth)
+                ){
+                    Text(
+                        text = adviceText
+                    )
+                }
+                OutlinedTextField(
+                    state = validationPassword,
+                    lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
+                    textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
+                    label = { Text("Rewrite password") },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledBorderColor = Color(Colors.kubeColor),
+                        errorBorderColor = Color(Colors.kubeColor),
+                        focusedBorderColor = Color(Colors.kubeColor),
+                        unfocusedBorderColor = Color(Colors.kubeColor)
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                )
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .height(30.dp)
                 )
                 Button(
@@ -268,7 +285,14 @@ fun EnteringScreen(navController: NavController){
                             height = 50.dp,
                             width = 150.dp
                         ),
-                    onClick = {navController.navigate(Routes.MainScreen)}
+                    onClick = {
+                        if(signUpValidation(password.text.toString(), validationPassword.text.toString())=="Confirm your password"){
+                            navController.navigate(Routes.MainScreen)
+                        }
+                        else{
+                            adviceText=signUpValidation(password.text.toString(), validationPassword.text.toString())
+                        }
+                    }
                 ) {
                     Text(
                         text = "Sign Up",
@@ -294,7 +318,28 @@ fun EnteringScreen(navController: NavController){
     }
 }
 
-
+fun signUpValidation(pass: String, valPass: String): String = runBlocking{
+    var upperQuantity: Int = 0
+    var lowerQuantity: Int = 0
+    var digitQuantity: Int = 0
+    for (x in 0 until pass.length){
+        if(pass[x].isUpperCase()){upperQuantity++}
+        if(pass[x].isLowerCase()){lowerQuantity++}
+        if(pass[x].isDigit()){digitQuantity++}
+    }
+    if (pass != valPass){
+        return@runBlocking "Passwords mismatch"
+    }
+    else if(pass.length<8){
+        return@runBlocking "Password has to contain at least 8 symbols"
+    }
+    else if(upperQuantity==0 || lowerQuantity==0 || digitQuantity==0){
+        return@runBlocking "Password has to contain uppercase, lowercase and numbers"
+    }
+    else{
+        return@runBlocking "Confirm your password"
+    }
+}
 
 
 

@@ -3,16 +3,14 @@ package com.example.kubeobs
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
 
-private const val BASE_URL =
-    "https://android-kotlin-fun-mars-server.appspot.com"
-
+val base_url = BuildConfig.base_url
 private val retrofit = Retrofit.Builder()
     .addConverterFactory(ScalarsConverterFactory.create())
-    .baseUrl(BASE_URL)
+    .baseUrl(base_url)
     .build()
 
 object RetrofitAPI {
-    val retrofitService : RetrofitInterface by lazy {
+    val instance : RetrofitInterface by lazy {
         retrofit.create(RetrofitInterface::class.java)
     }
 }

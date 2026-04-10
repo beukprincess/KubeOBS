@@ -42,12 +42,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.runBlocking
 import kotlin.math.roundToInt
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 @Composable
-fun EnteringScreen(navController: NavController){
+fun EnteringScreen(
+    navController: NavController,
+){
     var isSignUpDisplays by remember { mutableStateOf(false) }
     val slideDur: Int = 500
     val visibilityDur: Int = 1000
@@ -153,7 +162,10 @@ fun EnteringScreen(navController: NavController){
                             height = 50.dp,
                             width = 150.dp
                         ),
-                    onClick = {navController.navigate(Routes.MainScreen)}
+                    onClick = {
+
+                        navController.navigate(Routes.MainScreen)
+                    }
                 ) {
                     Text(
                         text = "Log In",

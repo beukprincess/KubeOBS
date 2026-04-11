@@ -111,6 +111,7 @@ fun EnteringScreen(
                 fontSize = 42.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
+                fontFamily = UbuntuFamily().ubuntuFamily
             )
             Column(
                 modifier = Modifier
@@ -123,7 +124,12 @@ fun EnteringScreen(
                     state = username,
                     lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
                     textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
-                    label = { Text("Username") },
+                    label = {
+                        Text(
+                            text = "Username",
+                            fontFamily = UbuntuFamily().ubuntuFamily
+                        )
+                            },
                     colors = OutlinedTextFieldDefaults.colors(
                         disabledBorderColor = Color(Colors.kubeColor),
                         errorBorderColor = Color(Colors.kubeColor),
@@ -136,7 +142,12 @@ fun EnteringScreen(
                     state = password,
                     lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
                     textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
-                    label = { Text("Password") },
+                    label = {
+                        Text(
+                            text = "Password",
+                            fontFamily = UbuntuFamily().ubuntuFamily
+                        )
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         disabledBorderColor = Color(Colors.kubeColor),
                         errorBorderColor = Color(Colors.kubeColor),
@@ -169,13 +180,17 @@ fun EnteringScreen(
                 ) {
                     Text(
                         text = "Log In",
-                        fontSize = 22.sp
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = UbuntuFamily().ubuntuFamily
                     )
                 }
             }
             Text(
                 text = "Have no account?",
                 color = Color.Black,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
             )
             TextButton(
                 onClick = {isSignUpDisplays=!isSignUpDisplays},
@@ -185,6 +200,8 @@ fun EnteringScreen(
                 Text(
                     text = "Sign up",
                     color = Color(Colors.kubeColor),
+                    fontWeight = FontWeight.Normal,
+                    fontFamily = UbuntuFamily().ubuntuFamily
                 )
             }
         }
@@ -221,6 +238,7 @@ fun EnteringScreen(
                 fontSize = 42.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
+                fontFamily = UbuntuFamily().ubuntuFamily
             )
             Column(
                 modifier = Modifier
@@ -233,7 +251,12 @@ fun EnteringScreen(
                     state = username,
                     lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
                     textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
-                    label = { Text("Username") },
+                    label = {
+                        Text(
+                            text = "Username",
+                            fontFamily = UbuntuFamily().ubuntuFamily
+                        )
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         disabledBorderColor = Color(Colors.kubeColor),
                         errorBorderColor = Color(Colors.kubeColor),
@@ -246,7 +269,12 @@ fun EnteringScreen(
                     state = password,
                     lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
                     textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
-                    label = { Text("Password") },
+                    label = {
+                        Text(
+                            text = "Password",
+                            fontFamily = UbuntuFamily().ubuntuFamily
+                        )
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         disabledBorderColor = Color(Colors.kubeColor),
                         errorBorderColor = Color(Colors.kubeColor),
@@ -264,14 +292,21 @@ fun EnteringScreen(
                     modifier = Modifier.width(OutlinedTextFieldDefaults.MinWidth)
                 ){
                     Text(
-                        text = adviceText
+                        text = adviceText,
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = UbuntuFamily().ubuntuFamily
                     )
                 }
                 OutlinedTextField(
                     state = validationPassword,
                     lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
                     textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
-                    label = { Text("Rewrite password") },
+                    label = {
+                        Text(
+                            text = "Rewrite password",
+                            fontFamily = UbuntuFamily().ubuntuFamily
+                        )
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         disabledBorderColor = Color(Colors.kubeColor),
                         errorBorderColor = Color(Colors.kubeColor),
@@ -308,13 +343,17 @@ fun EnteringScreen(
                 ) {
                     Text(
                         text = "Sign Up",
-                        fontSize = 22.sp
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = UbuntuFamily().ubuntuFamily
                     )
                 }
             }
             Text(
                 text = "Have an account?",
                 color = Color.Black,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
             )
             TextButton(
                 onClick = {isSignUpDisplays=!isSignUpDisplays},
@@ -324,6 +363,8 @@ fun EnteringScreen(
                 Text(
                     text = "Log In",
                     color = Color(Colors.kubeColor),
+                    fontWeight = FontWeight.Normal,
+                    fontFamily = UbuntuFamily().ubuntuFamily
                 )
             }
         }

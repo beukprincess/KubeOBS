@@ -111,7 +111,7 @@ fun ClusterSample(
                                     modifier = Modifier.padding(start=10.dp, top=10.dp)
                                 ){
                                     Text(
-                                        text = "Namespace header:",
+                                        text = "Namespace header: ",
                                         fontSize = 24.sp,
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = UbuntuFamily().ubuntuFamily

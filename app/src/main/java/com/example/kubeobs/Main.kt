@@ -15,13 +15,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,154 +43,145 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     navController: NavController,
     viewModel: MainViewModel = viewModel()
 ){
-    val kubernetesItemsList: List<KubernetesItemsList> = listOf(
-        KubernetesItemsList.NamespaceHeader("development"),
-        KubernetesItemsList.Node("development-node", 0.17f, 2.03f),
-        KubernetesItemsList.Pod("development-pod1", "Ok", 3),
-        KubernetesItemsList.Node("features-node", 1.29f, 4.11f),
-        KubernetesItemsList.Pod("feature-pod1", "Ok", 0),
-        KubernetesItemsList.Pod("feature-pod2", "Ok", 0),
-        KubernetesItemsList.NamespaceHeader("testing"),
-        KubernetesItemsList.Node("testing-node", 0.01f, 0.03f),
-        KubernetesItemsList.Pod("testing-pod", "Err", 4),
-        KubernetesItemsList.NamespaceHeader("production"),
-        KubernetesItemsList.Node("production-node", 17.98f, 21.01f),
-        KubernetesItemsList.Pod("production-pod1", "Ok", 5),
-        KubernetesItemsList.Node("server-node", 53.32f, 45.88f),
-        KubernetesItemsList.Pod("server-pod1", "Ok", 0),
-        KubernetesItemsList.Pod("server-pod2", "Warn", 0),
-        KubernetesItemsList.Node("feedback-node", 0.02f, 0.10f),
-        KubernetesItemsList.Pod("feedback-pod1", "Warn", 8),
-        )
+    val clustersList: List<KubernetesItemsList.Cluster> = listOf(
+        KubernetesItemsList.Cluster("softserve-cluster"),
+        KubernetesItemsList.Cluster("dyneria-cluster"),
+        KubernetesItemsList.Cluster("lanteria-cluster"),
+    )
     val state by viewModel.uiState.collectAsState()
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Row(
-            modifier = Modifier
-                .height(122.dp)
-                .padding(start=20.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ){
-            Text(
-                text = "KubeOBS",
-                fontSize = 42.sp,
-                fontWeight=FontWeight.Bold,
-                color = Color.Black,
-                fontFamily = UbuntuFamily().ubuntuFamily
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title= {
+                    Text(
+                        text = "KubeOBS",
+                        fontSize = 42.sp,
+                        fontWeight=FontWeight.Bold,
+                        color = Color.Black,
+                        fontFamily = UbuntuFamily().ubuntuFamily
+                    )
+                }
+            )
+        },
+        bottomBar = {
+            BottomAppBar(
+                containerColor = Color.Transparent,
+                tonalElevation = 0.dp,
+                actions = {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Button(
+                            colors = ButtonColors(
+                                containerColor = Color(Colors.kubeColor),
+                                contentColor = Color.White,
+                                disabledContainerColor = Color(Colors.kubeColor),
+                                disabledContentColor = Color.White
+                            ),
+                            modifier = Modifier
+                                .padding(end=20.dp, bottom=20.dp)
+                                .size(
+                                    height = 40.dp,
+                                    width = 150.dp
+                                ),
+                            onClick = {}
+                        ) {
+                            Text(
+                                text = "Add cluster",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Normal,
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                        }
+                    }
+                }
             )
         }
-        LazyColumn(
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal=20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(kubernetesItemsList) {item->
-                when(val currentItem = item){
-                    is KubernetesItemsList.NamespaceHeader ->{
-                        Card(
-                            modifier = Modifier
-                                .height(100.dp)
-                                .fillMaxWidth(),
-                            shape = RoundedCornerShape(15.dp),
-                            border = BorderStroke(2.dp, Color(Colors.kubeColor)),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color.White,
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxSize()
-                            ){
-                                Column(
-                                    modifier = Modifier.padding(start=10.dp, top=10.dp)
-                                ){
-                                    Text(
-                                        text = "Namespace header:",
-                                        fontSize = 24.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        fontFamily = UbuntuFamily().ubuntuFamily
-                                    )
-                                    Text(
-                                        text = item.name,
-                                        fontSize = 22.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        fontFamily = UbuntuFamily().ubuntuFamily
-                                    )
-                                }
-                            }
-                        }
+                .fillMaxSize()
+                .padding(innerPadding)
+        ){
+            when(val currentState = state){
+                is UIState.Loading ->{
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ){
+                        CircularProgressIndicator(
+                            color = Color(Colors.kubeColor)
+                        )
                     }
-                    is KubernetesItemsList.Node ->{
-                        Card(
-                            modifier = Modifier
-                                .height(100.dp)
-                                .fillMaxWidth(),
-                            shape = RoundedCornerShape(15.dp),
-                            border = BorderStroke(2.dp, Color(Colors.kubeColor)),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color.White,
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxSize()
-                            ){
-                                Column(
-                                    modifier = Modifier.padding(start=10.dp, top=10.dp)
-                                ){
-                                    Text(
-                                        text = "Node:",
-                                        fontSize = 24.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        fontFamily = UbuntuFamily().ubuntuFamily
-                                    )
-                                    Text(
-                                        text = item.name,
-                                        fontSize = 22.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        fontFamily = UbuntuFamily().ubuntuFamily
-                                    )
-                                }
-                            }
-                        }
+                }
+                is UIState.Success ->{
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ){
+                        Text(
+                            text="Success: ${currentState.data}",
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black,)
                     }
-                    is KubernetesItemsList.Pod ->{
-                        Card(
+                }
+                is UIState.Error ->{
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ){
+                        LazyColumn(
                             modifier = Modifier
-                                .height(100.dp)
-                                .fillMaxWidth(),
-                            shape = RoundedCornerShape(15.dp),
-                            border = BorderStroke(2.dp, Color(Colors.kubeColor)),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color.White,
-                            )
+                                .fillMaxWidth()
+                                .padding(horizontal=20.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxSize()
-                            ){
-                                Column(
-                                    modifier = Modifier.padding(start=10.dp, top=10.dp)
-                                ){
-                                    Text(
-                                        text = "Pod:",
-                                        fontSize = 24.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        fontFamily = UbuntuFamily().ubuntuFamily
+                            items(clustersList){cluster->
+                                Card(
+                                    modifier = Modifier
+                                        .height(100.dp)
+                                        .fillMaxWidth(),
+                                    shape = RoundedCornerShape(15.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color(Colors.kubeColor),
+                                        contentColor = Color.White,
                                     )
-                                    Text(
-                                        text = item.name,
-                                        fontSize = 22.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        fontFamily = UbuntuFamily().ubuntuFamily
-                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxSize()
+                                    ){
+                                        Column(
+                                            modifier = Modifier.padding(start=10.dp, top=10.dp)
+                                        ){
+                                            Text(
+                                                text = "Cluster:",
+                                                fontSize = 24.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                fontFamily = UbuntuFamily().ubuntuFamily
+                                            )
+                                            Text(
+                                                text = cluster.name,
+                                                fontSize = 22.sp,
+                                                fontWeight = FontWeight.Normal,
+                                                fontFamily = UbuntuFamily().ubuntuFamily
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -195,58 +189,6 @@ fun MainScreen(
                 }
             }
         }
-        Row(
-            modifier = Modifier
-                .height(100.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            Button(
-                colors = ButtonColors(
-                    containerColor = Color(Colors.kubeColor),
-                    contentColor = Color.White,
-                    disabledContainerColor = Color(Colors.kubeColor),
-                    disabledContentColor = Color.White
-                ),
-                modifier = Modifier
-                    .padding(end=20.dp, bottom=20.dp)
-                    .size(
-                        height = 40.dp,
-                        width = 150.dp
-                    ),
-                onClick = {}
-            ) {
-                Text(
-                    text = "Add cluster",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-            }
-        }
-//        when(val currentState = state){
-//            is UIState.Loading ->{
-//                CircularProgressIndicator(
-//                    color = Color(Colors.kubeColor)
-//                )
-//            }
-//            is UIState.Success ->{
-//                Text(
-//                    text="Success: ${currentState.data}",
-//                    fontSize = 26.sp,
-//                    fontWeight = FontWeight.Bold,
-//                    color = Color.Black,
-//                )
-//            }
-//            is UIState.Error ->{
-//                Text(
-//                    text=currentState.e,
-//                    fontSize = 26.sp,
-//                    fontWeight = FontWeight.Bold,
-//                    color = Color.Black,
-//                )
-//            }
-//        }
     }
 }
 

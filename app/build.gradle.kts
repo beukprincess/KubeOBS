@@ -1,6 +1,6 @@
 import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 
-val base_url: String = gradleLocalProperties(rootDir, providers).getProperty("BASE_URL")
+val base_url: String = gradleLocalProperties(rootDir, providers).getProperty("BASE_URL")?:"BASE_URL"
 
 plugins {
     alias(libs.plugins.android.application)

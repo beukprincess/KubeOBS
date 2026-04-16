@@ -25,6 +25,8 @@ jobs:
       run: chmod +x gradlew
     - name: Build with Gradle
       run: ./gradlew assembleDebug
+      env:
+        BASE_URL: ${{ secrets.BASE_URL }}
     - name: Send APK
       uses: appleboy/telegram-action@master
       with:

@@ -1,6 +1,11 @@
 import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 
-val base_url: String = gradleLocalProperties(rootDir, providers).getProperty("BASE_URL")?:"BASE_URL"
+// val base_url: String = gradleLocalProperties(rootDir, providers).getProperty("BASE_URL")?:"BASE_URL"
+val envBaseUrl: String? = System.getenv("BASE_URL")
+val localBaseUrl: String? = gradleLocalProperties(rootDir, providers).getProperty("BASE_URL")
+
+val finalBaseUrl = envBaseUrl ?: localBaseUrl 
+    ?: throw GradleException("BASE_URL not found")
 
 plugins {
     alias(libs.plugins.android.application)
@@ -35,7 +40,11 @@ android {
             )
         }
         getByName("debug") {
-            buildConfigField("String", "base_url", base_url)
+            buildConfigField("String", "base_url", "\"$finalBaseUrl\"")
+        }
+        getByName("release") {
+            buildConfigField("String", "base_url", "\"$finalBaseUrl\"")
+            isMinifyEnabled = false
         }
     }
     compileOptions {

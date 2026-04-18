@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
@@ -24,10 +25,15 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,6 +61,7 @@ fun MainScreen(
         KubernetesItemsList.Cluster("dyneria-cluster"),
         KubernetesItemsList.Cluster("lanteria-cluster"),
     )
+    var displayDialog = remember {mutableStateOf(false)}
     val state by viewModel.uiState.collectAsState()
     Scaffold(
         topBar = {
@@ -114,81 +121,113 @@ fun MainScreen(
         ){
             when(val currentState = state){
                 is UIState.Loading ->{
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ){
-                        CircularProgressIndicator(
-                            color = Color(Colors.kubeColor)
-                        )
-                    }
+                    OnLoading()
                 }
                 is UIState.Success ->{
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ){
-                        Text(
-                            text="Success: ${currentState.data}",
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black,)
-                    }
+                    OnSuccess(clustersList)
                 }
                 is UIState.Error ->{
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                    displayDialog.value = true
+                    OnError(currentState.e, displayDialog)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OnLoading(){
+    Column(
+        modifier = Modifier
+            .fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ){
+        CircularProgressIndicator(
+            color = Color(Colors.kubeColor)
+        )
+    }
+}
+
+@Composable
+fun OnSuccess(_clustersList: List<KubernetesItemsList.Cluster>){
+    Column(
+        modifier = Modifier
+            .fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ){
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal=20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(_clustersList){cluster->
+                Card(
+                    modifier = Modifier
+                        .height(100.dp)
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(15.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(Colors.kubeColor),
+                        contentColor = Color.White,
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize()
                     ){
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal=20.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(clustersList){cluster->
-                                Card(
-                                    modifier = Modifier
-                                        .height(100.dp)
-                                        .fillMaxWidth(),
-                                    shape = RoundedCornerShape(15.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = Color(Colors.kubeColor),
-                                        contentColor = Color.White,
-                                    )
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxSize()
-                                    ){
-                                        Column(
-                                            modifier = Modifier.padding(start=10.dp, top=10.dp)
-                                        ){
-                                            Text(
-                                                text = "Cluster:",
-                                                fontSize = 24.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                fontFamily = UbuntuFamily().ubuntuFamily
-                                            )
-                                            Text(
-                                                text = cluster.name,
-                                                fontSize = 22.sp,
-                                                fontWeight = FontWeight.Normal,
-                                                fontFamily = UbuntuFamily().ubuntuFamily
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                        Column(
+                            modifier = Modifier.padding(start=10.dp, top=10.dp)
+                        ){
+                            Text(
+                                text = "Cluster:",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                            Text(
+                                text = cluster.name,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Normal,
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun OnError(errorMessage: String, _displayDialog: MutableState<Boolean>){
+    if(_displayDialog.value){
+        AlertDialog(
+            title = {
+                Text(
+                    text = "Error:",
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = UbuntuFamily().ubuntuFamily
+                )
+            },
+            text = {
+                Text(
+                    text = errorMessage,
+                    fontWeight = FontWeight.Normal,
+                    fontFamily = UbuntuFamily().ubuntuFamily
+                )
+            },
+            onDismissRequest = {},
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        _displayDialog.value = false
+                    }
+                ) {
+                    Text("Ok")
+                }
+            }
+        )
     }
 }
 

@@ -4,8 +4,8 @@ import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 val envBaseUrl: String? = System.getenv("BASE_URL")
 val localBaseUrl: String? = gradleLocalProperties(rootDir, providers).getProperty("BASE_URL")
 
-val finalBaseUrl = envBaseUrl ?: localBaseUrl 
-    ?: throw GradleException("BASE_URL not found")
+val rawBaseUrl = envBaseUrl ?: localBaseUrl ?: throw GradleException("BASE_URL not found")
+val finalBaseUrl = rawBaseUrl.removeSurrounding("\"")
 
 plugins {
     alias(libs.plugins.android.application)

@@ -25,6 +25,8 @@ except Exception as e:
 
 v1 = client.CoreV1Api()
 
+#@app.get("/pods")
+
 @app.get("/nodes")
 def get_nodes():
     try:

@@ -16,3 +16,4 @@
 local.properties
 .gitignore
 .gitattributes
+.env.swp

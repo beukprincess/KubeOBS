@@ -3,14 +3,16 @@ import os
 from fastapi import FastAPI, Depends, Request, Header, HTTPException
 from dotenv import load_dotenv
 
+
+load_dotenv()
+ENV_VAR = os.getenv('API_TOKEN')
+
 def verify_token(x_auth_token: str = Header(None)):
     if not ENV_VAR or x_auth_token != ENV_VAR:
         raise HTTPException(status_code=401, detail="Error")
     return x_auth_token
 
-load_dotenv()
-app = FastAPI(dependencies=[Depends(verify_token)])
-ENV_VAR = os.getenv('API_TOKEN')
+app = FastAPI(title="Kubeobs API", dependencies=[Depends(verify_token)])
 
 
 try:

@@ -27,8 +27,14 @@ except Exception as e:
 
 v1 = client.CoreV1Api()
 
-#
-#@app.get("/pods")
+
+@app.get("/pods")
+def get_nodes():
+    try:
+        pods = v1.list_pod_for_all_namespaces(watch=False)
+        return {"status": "success", "pods": [n.metadata.name for n in pods.items]}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.get("/nodes")
 def get_nodes():

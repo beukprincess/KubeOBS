@@ -1,11 +1,7 @@
 package com.example.kubeobs
 
-import android.annotation.SuppressLint
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
@@ -33,11 +28,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,18 +42,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+import retrofit2.HttpException
+import java.io.IOException
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     navController: NavController,
     viewModel: MainViewModel = viewModel()
 ){
-    val clustersList: List<KubernetesItemsList.Cluster> = listOf(
-        KubernetesItemsList.Cluster("softserve-cluster"),
-        KubernetesItemsList.Cluster("dyneria-cluster"),
-        KubernetesItemsList.Cluster("lanteria-cluster"),
-    )
     var displayDialog = remember {mutableStateOf(false)}
     val state by viewModel.uiState.collectAsState()
     Scaffold(
@@ -124,7 +114,7 @@ fun MainScreen(
                     OnLoading()
                 }
                 is UIState.Success ->{
-                    OnSuccess(clustersList)
+                    OnSuccess(currentState.data)
                 }
                 is UIState.Error ->{
                     displayDialog.value = true
@@ -150,7 +140,7 @@ fun OnLoading(){
 }
 
 @Composable
-fun OnSuccess(_clustersList: List<KubernetesItemsList.Cluster>){
+fun OnSuccess(_podsList: NodesResponse?){
     Column(
         modifier = Modifier
             .fillMaxSize(),
@@ -162,7 +152,7 @@ fun OnSuccess(_clustersList: List<KubernetesItemsList.Cluster>){
                 .padding(horizontal=20.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(_clustersList){cluster->
+            items(_podsList?.nodes?.size ?: 1){ pod->
                 Card(
                     modifier = Modifier
                         .height(100.dp)
@@ -180,13 +170,13 @@ fun OnSuccess(_clustersList: List<KubernetesItemsList.Cluster>){
                             modifier = Modifier.padding(start=10.dp, top=10.dp)
                         ){
                             Text(
-                                text = "Cluster:",
+                                text = "Pod:",
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = UbuntuFamily().ubuntuFamily
                             )
                             Text(
-                                text = cluster.name,
+                                text = pod.toString(),
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Normal,
                                 fontFamily = UbuntuFamily().ubuntuFamily
@@ -242,10 +232,12 @@ class MainViewModel(): ViewModel(){
     fun fetchData() {
         viewModelScope.launch {
             try {
-                val response = RetrofitAPI.instance.getAll()
-                _uiState.value = UIState.Success(response)
-            } catch (e: Exception){
-                _uiState.value = UIState.Error(e.toString())
+                val podsResponse = RetrofitAPI.instance.getNodesInfo()
+                _uiState.value = UIState.Success(podsResponse.body())
+            } catch (e: HttpException) {
+
+            } catch (e: IOException) {
+
             }
         }
     }

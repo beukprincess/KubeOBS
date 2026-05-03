@@ -1,11 +1,12 @@
 package com.example.kubeobs
 
 import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
 
 val base_url = BuildConfig.base_url
 private val retrofit = Retrofit.Builder()
-    .addConverterFactory(ScalarsConverterFactory.create())
+    .addConverterFactory(GsonConverterFactory.create())
     .baseUrl(base_url)
     .build()
 

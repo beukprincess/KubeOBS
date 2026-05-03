@@ -49,7 +49,7 @@ jobs:
       run: |
         IMAGE_TAG="k3s-api-server:${{ github.sha }}"
         docker build -t $IMAGE_TAG .
-        docker save $IMAGE_TAG | sudo k3s images import -
+        docker save $IMAGE_TAG | sudo k3s ctr -n k8s.io images import -
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
     - name: Update K3s Deployment

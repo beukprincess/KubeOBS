@@ -174,7 +174,6 @@ fun EnteringScreen(
                             width = 150.dp
                         ),
                     onClick = {
-
                         navController.navigate(Routes.MainScreen)
                     }
                 ) {

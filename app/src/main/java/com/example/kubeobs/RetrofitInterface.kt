@@ -1,13 +1,14 @@
 package com.example.kubeobs
 
+import retrofit2.Response
 import retrofit2.http.GET
-import retrofit2.http.Path
+import retrofit2.http.Headers
 
 interface RetrofitInterface {
-    @GET("/users")
-    suspend fun getUsers(): Users
-    @GET("/")
-    suspend fun getAll(): String
-    @GET("/users{id}")
-    suspend fun getUserByID(@Path("id") id: Int): User
+    @Headers("X-Auth-Token: uVuxYa/e8+Ox4rK0pgYY7sCR/ArdAp8eeBIVpxGSlKE=")
+    @GET("/nodes")
+    suspend fun getNodesInfo(): Response<NodesResponse>
+    @Headers("X-Auth-Token: uVuxYa/e8+Ox4rK0pgYY7sCR/ArdAp8eeBIVpxGSlKE=")
+    @GET("/pods")
+    suspend fun getPodsInfo(): Response<PodsResponse>
 }

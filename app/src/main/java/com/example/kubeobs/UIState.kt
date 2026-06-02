@@ -1,7 +1,12 @@
 package com.example.kubeobs
 
-sealed interface UIState{
-    object Loading: UIState
-    data class Success(val data: String): UIState
-    data class Error(val e: String): UIState
+sealed interface NodesUIState{
+    object LoadingNodes: NodesUIState
+    data class SuccessNodes(val data: NodesResponse?): NodesUIState
+    data class ErrorNodes(val e: String): NodesUIState
+}
+sealed interface PodsUIState{
+    object LoadingPods: PodsUIState
+    data class SuccessPods(val data: PodsResponse?): PodsUIState
+    data class ErrorPods(val e: String): PodsUIState
 }

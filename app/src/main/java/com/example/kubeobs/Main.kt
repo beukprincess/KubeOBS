@@ -250,7 +250,7 @@ class MainViewModel(): ViewModel(){
             _uiState.value = NodesUIState.LoadingNodes
             try {
                 Log.i("KubeOBS_Network", "Making request...")
-                val nodesResponse = RetrofitAPI.instance.getNodesInfo()
+                val nodesResponse = RetrofitAPI.instance.getNodes()
 
                 if (nodesResponse.isSuccessful) {
                     val responseData = nodesResponse.body()

@@ -16,8 +16,16 @@ data class PodsResponse(
     val pods: List<String>
 )
 
-data class PodInfo(
-    val ip: String,
-    val namespace: String,
-    val name: String
+data class PodsInfoResponse(
+    val status: String,
+    val totalPods: Int,
+    val pods: List<PodHealth>
 )
+data class PodHealth(
+    val name: String,
+    val namespace: String,
+    val status: String,
+    val restarts: Int,
+    val ageSeconds: Int
+)
+

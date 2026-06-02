@@ -3,12 +3,16 @@ package com.example.kubeobs
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Headers
+import retrofit2.http.Query
 
 interface RetrofitInterface {
     @Headers("X-Auth-Token: uVuxYa/e8+Ox4rK0pgYY7sCR/ArdAp8eeBIVpxGSlKE=")
     @GET("/nodes")
-    suspend fun getNodesInfo(): Response<NodesResponse>
+    suspend fun getNodes(): Response<NodesResponse>
     @Headers("X-Auth-Token: uVuxYa/e8+Ox4rK0pgYY7sCR/ArdAp8eeBIVpxGSlKE=")
     @GET("/pods")
-    suspend fun getPodsInfo(): Response<PodsResponse>
+    suspend fun getPods(): Response<PodsResponse>
+    @Headers("X-Auth-Token: uVuxYa/e8+Ox4rK0pgYY7sCR/ArdAp8eeBIVpxGSlKE=")
+    @GET("/pods/health")
+    suspend fun getPodsInfo(): Response<PodsInfoResponse>
 }

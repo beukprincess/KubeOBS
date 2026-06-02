@@ -21,7 +21,7 @@ try:
         print("Завантажено внутрішній конфіг кластера")
     else:
         config.load_kube_config()
-        print("Завантажено локальний kubeconfig")
+        print("kubeconfig")
 except Exception as e:
     print(f"Помилка завантаження конфігу: {e}")
 
@@ -43,3 +43,10 @@ def get_nodes():
         return {"status": "success", "nodes": [n.metadata.name for n in nodes.items]}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@app.get("/services")
+def get_services():
+    try:
+        return {"status": "success"}
+    except Exception as e:
+        return {"status" :"error"}

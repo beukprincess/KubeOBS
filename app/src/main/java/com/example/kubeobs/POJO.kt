@@ -13,7 +13,7 @@ data class NodeInfo(
 
 data class PodsResponse(
     val status: String,
-    val nodes: List<String>
+    val pods: List<String>
 )
 
 data class PodInfo(

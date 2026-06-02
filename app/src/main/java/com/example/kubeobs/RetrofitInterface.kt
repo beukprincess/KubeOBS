@@ -5,10 +5,10 @@ import retrofit2.http.GET
 import retrofit2.http.Headers
 
 interface RetrofitInterface {
-    @Headers("X-Auth-Token: 509d90svckmxb098283905535j456jimbvi")
+    @Headers("X-Auth-Token: uVuxYa/e8+Ox4rK0pgYY7sCR/ArdAp8eeBIVpxGSlKE=")
     @GET("/nodes")
     suspend fun getNodesInfo(): Response<NodesResponse>
-    @Headers("X-Auth-Token: 509d90svckmxb098283905535j456jimbvi")
-    @GET("/nodes")
+    @Headers("X-Auth-Token: uVuxYa/e8+Ox4rK0pgYY7sCR/ArdAp8eeBIVpxGSlKE=")
+    @GET("/pods")
     suspend fun getPodsInfo(): Response<PodsResponse>
 }

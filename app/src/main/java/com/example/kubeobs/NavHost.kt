@@ -19,6 +19,9 @@ fun Navigation(){
             composable(Routes.MainScreen){
                 MainScreen(navController = navController)
             }
+            composable(Routes.PodScreen){
+                PodScreen(navController = navController)
+            }
             composable(Routes.StatScreen){
                 StatScreen(navController = navController)
             }

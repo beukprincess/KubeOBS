@@ -1,7 +1,6 @@
 package com.example.kubeobs
 
 import android.util.Log
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,9 +49,9 @@ import java.io.IOException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(
+fun PodScreen(
     navController: NavController,
-    viewModel: MainViewModel = viewModel()
+    viewModel: PodViewModel = viewModel()
 ){
     var displayDialog = remember {mutableStateOf(false)}
     val state by viewModel.uiState.collectAsState()
@@ -113,15 +112,15 @@ fun MainScreen(
                 .padding(innerPadding)
         ){
             when(val currentState = state){
-                is NodesUIState.LoadingNodes ->{
-                    OnLoading()
+                is PodsUIState.LoadingPods ->{
+                    OnNodesLoading()
                 }
-                is NodesUIState.SuccessNodes ->{
-                    OnSuccess(currentState.data, navController)
+                is PodsUIState.SuccessPods ->{
+                    OnNodesSuccess(currentState.data)
                 }
-                is NodesUIState.ErrorNodes ->{
+                is PodsUIState.ErrorPods ->{
                     displayDialog.value = true
-                    OnError(currentState.e, displayDialog)
+                    OnNodesError(currentState.e, displayDialog)
                 }
             }
         }
@@ -129,7 +128,7 @@ fun MainScreen(
 }
 
 @Composable
-fun OnLoading(){
+fun OnNodesLoading(){
     Column(
         modifier = Modifier
             .fillMaxSize(),
@@ -143,8 +142,8 @@ fun OnLoading(){
 }
 
 @Composable
-fun OnSuccess(_podsList: NodesResponse?, navController: NavController) {
-    val nodesList = _podsList?.nodes ?: emptyList()
+fun OnNodesSuccess(_podsList: PodsResponse?) {
+    val nodesList = _podsList?.pods ?: emptyList()
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -170,7 +169,7 @@ fun OnSuccess(_podsList: NodesResponse?, navController: NavController) {
                             .height(100.dp)
                             .fillMaxWidth(),
                         onClick = {
-                            navController.navigate(Routes.PodScreen)
+                            Log.d("Node", "Clicked!!!")
                         },
                         shape = RoundedCornerShape(15.dp),
                         colors = CardDefaults.cardColors(
@@ -206,7 +205,7 @@ fun OnSuccess(_podsList: NodesResponse?, navController: NavController) {
 }
 
 @Composable
-fun OnError(errorMessage: String, _displayDialog: MutableState<Boolean>){
+fun OnNodesError(errorMessage: String, _displayDialog: MutableState<Boolean>){
     if(_displayDialog.value){
         AlertDialog(
             title = {
@@ -237,9 +236,9 @@ fun OnError(errorMessage: String, _displayDialog: MutableState<Boolean>){
     }
 }
 
-class MainViewModel(): ViewModel(){
-    private val _uiState = MutableStateFlow<NodesUIState>(NodesUIState.LoadingNodes)
-    val uiState: StateFlow<NodesUIState> = _uiState.asStateFlow()
+class PodViewModel(): ViewModel(){
+    private val _uiState = MutableStateFlow<PodsUIState>(PodsUIState.LoadingPods)
+    val uiState: StateFlow<PodsUIState> = _uiState.asStateFlow()
 
     init {
         fetchData()
@@ -247,28 +246,28 @@ class MainViewModel(): ViewModel(){
 
     fun fetchData() {
         viewModelScope.launch {
-            _uiState.value = NodesUIState.LoadingNodes
+            _uiState.value = PodsUIState.LoadingPods
             try {
                 Log.i("KubeOBS_Network", "Making request...")
-                val nodesResponse = RetrofitAPI.instance.getNodesInfo()
+                val podsResponse = RetrofitAPI.instance.getPodsInfo()
 
-                if (nodesResponse.isSuccessful) {
-                    val responseData = nodesResponse.body()
+                if (podsResponse.isSuccessful) {
+                    val responseData = podsResponse.body()
 
-                    Log.d("KubeOBS_Network", "Success, Code: ${nodesResponse.code()}")
+                    Log.d("KubeOBS_Network", "Success, Code: ${podsResponse.code()}")
                     Log.d("KubeOBS_Network", "Resp body: $responseData")
-                    Log.d("KubeOBS_Network", "Node body: ${responseData?.nodes}")
-                    Log.d("KubeOBS_Network", "Nodes quantity: ${responseData?.nodes?.size}")
+                    Log.d("KubeOBS_Network", "Pod body: ${responseData?.pods}")
+                    Log.d("KubeOBS_Network", "Pods quantity: ${responseData?.pods?.size}")
 
-                    _uiState.value = NodesUIState.SuccessNodes(responseData)
+                    _uiState.value = PodsUIState.SuccessPods(responseData)
                 } else {
-                    Log.e("KubeOBS_Network", "Server err: ${nodesResponse.errorBody()?.string()}")
-                    _uiState.value = NodesUIState.ErrorNodes("Error: ${nodesResponse.code()}")
+                    Log.e("KubeOBS_Network", "Server err: ${podsResponse.errorBody()?.string()}")
+                    _uiState.value = PodsUIState.ErrorPods("Error: ${podsResponse.code()}")
                 }
             } catch (e: HttpException) {
-                _uiState.value = NodesUIState.ErrorNodes("Net err: ${e.message}")
+                _uiState.value = PodsUIState.ErrorPods("Net err: ${e.message}")
             } catch (e: IOException) {
-                _uiState.value = NodesUIState.ErrorNodes("Con err: ${e.message}")
+                _uiState.value = PodsUIState.ErrorPods("Con err: ${e.message}")
             }
         }
     }

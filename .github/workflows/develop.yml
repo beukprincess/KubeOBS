@@ -1,10 +1,14 @@
-name: Develop CI/CD
+name: Build Android APK
 
 on:
   push:
-    branches: [ "develop" ]
-  pull_request:
-    branches: [ "develop" ]
+    branches: [ develop, main ]
+    paths:
+      - 'app/**'
+      - '**.gradle.kts'
+      - 'gradle/**'
+      - 'gradlew'
+
 
 jobs:
   build-android:
@@ -37,29 +41,3 @@ jobs:
         token: ${{ secrets.TELEGRAM_TOKEN }}
         message: "New build!"
         document: app/build/outputs/apk/debug/*.apk
-
-  deploy-backend:
-    runs-on: [self-hosted, k3s-runner]
-    needs: build-android 
-    
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Build and Import Image to K3s
-      run: |
-        IMAGE_TAG="k3s-api-server:${{ github.sha }}"
-        docker build -t $IMAGE_TAG .
-        docker save $IMAGE_TAG | sudo k3s ctr -n k8s.io images import -
-        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-
-    - name: Update K3s Deployment
-      run: |
-        kubectl set image deployment/python-api-deployment api-container=k3s-api-server:${{ github.sha }}
-        kubectl rollout status deployment/python-api-deployment
-
-    - name: Notify Backend Status
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TELEGRAM_CHAT_ID }}
-        token: ${{ secrets.TELEGRAM_TOKEN }}
-        message: "API updated!"

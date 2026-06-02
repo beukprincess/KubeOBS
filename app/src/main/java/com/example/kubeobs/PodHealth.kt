@@ -1,11 +1,18 @@
 package com.example.kubeobs
 
 import android.util.Log
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -49,7 +56,7 @@ fun PodHealthScreen(
             TopAppBar(
                 title= {
                     Text(
-                        text = "KubeOBS",
+                        text = "Pod health",
                         fontSize = 42.sp,
                         fontWeight=FontWeight.Bold,
                         color = Color.Black,
@@ -97,7 +104,12 @@ fun OnPodHealthLoading(){
 @Composable
 fun OnPodHealthSuccess(_podsInfo: PodsInfoResponse?, podIndex: Int) {
     val podsList = _podsInfo?.pods ?: emptyList()
-    val currentPod = podsList[podIndex]
+    val currentPod = podsList[podIndex].toString().slice(podsList[podIndex].toString().indexOf("name")..podsList[podIndex].toString().length-2)
+    val currentPodName = currentPod.slice(currentPod.indexOf("name")+5..currentPod.indexOf("namespace")-3)
+    val currentPodNamespace = currentPod.slice(currentPod.indexOf("namespace")+10..currentPod.indexOf("status")-3)
+    val currentPodStatus = currentPod.slice(currentPod.indexOf("status")+7..currentPod.indexOf("restarts")-3)
+    val currentPodRestarts = currentPod.slice(currentPod.indexOf("restarts")+9..currentPod.indexOf("ageSeconds")-3).toInt()
+    val currentPodAgeSeconds = currentPod.slice(currentPod.indexOf("ageSeconds")+11..<currentPod.length).toInt()
     Column(
         modifier = Modifier
             .padding(horizontal = 20.dp)
@@ -111,12 +123,119 @@ fun OnPodHealthSuccess(_podsInfo: PodsInfoResponse?, podIndex: Int) {
                 fontFamily = UbuntuFamily().ubuntuFamily
             )
         } else{
-            Text(
-                text = currentPod.toString(),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Normal,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
+            Card(
+                modifier = Modifier
+                    .height(300.dp)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(15.dp),
+                border = BorderStroke(2.dp, Color(Colors.kubeColor)),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White,
+                )
+            ){
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = 10.dp, top = 10.dp)
+                ) {
+                    Text(
+                        text = "Name:",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = UbuntuFamily().ubuntuFamily
+                    )
+                    Text(
+                        text = currentPodName,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = UbuntuFamily().ubuntuFamily
+                    )
+                    Spacer(
+                        modifier = Modifier
+                            .height(10.dp)
+                            .fillMaxWidth()
+                    )
+                    Text(
+                        text = "Namespace: ",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = UbuntuFamily().ubuntuFamily
+                    )
+                    Text(
+                        text = currentPodNamespace,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = UbuntuFamily().ubuntuFamily
+                    )
+                    Spacer(
+                        modifier = Modifier
+                            .height(10.dp)
+                            .fillMaxWidth()
+                    )
+                    Text(
+                        text = "Status: ",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = UbuntuFamily().ubuntuFamily
+                    )
+                    if (currentPodStatus=="Running"){
+                        Text(
+                            color = Color.Green,
+                            text = currentPodStatus,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Normal,
+                            fontFamily = UbuntuFamily().ubuntuFamily
+                        )
+                    } else {
+                        Text(
+                            color = Color.Red,
+                            text = currentPodStatus,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Normal,
+                            fontFamily = UbuntuFamily().ubuntuFamily
+                        )
+                    }
+                    Spacer(
+                        modifier = Modifier
+                            .height(10.dp)
+                            .fillMaxWidth()
+                    )
+                    Text(
+                        text = "Restarts: ",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = UbuntuFamily().ubuntuFamily
+                    )
+                    Text(
+                        text = currentPodRestarts.toString(),
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = UbuntuFamily().ubuntuFamily
+                    )
+                    Spacer(
+                        modifier = Modifier
+                            .height(10.dp)
+                            .fillMaxWidth()
+                    )
+                    Text(
+                        text = "Age(seconds): ",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = UbuntuFamily().ubuntuFamily
+                    )
+                    Text(
+                        text = currentPodAgeSeconds.toString(),
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = UbuntuFamily().ubuntuFamily
+                    )
+                    Spacer(
+                        modifier = Modifier
+                            .height(10.dp)
+                            .fillMaxWidth()
+                    )
+                }
+            }
         }
     }
 }

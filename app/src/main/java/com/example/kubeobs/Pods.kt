@@ -61,7 +61,7 @@ fun PodScreen(
             TopAppBar(
                 title= {
                     Text(
-                        text = "KubeOBS",
+                        text = "Your pods",
                         fontSize = 42.sp,
                         fontWeight=FontWeight.Bold,
                         color = Color.Black,

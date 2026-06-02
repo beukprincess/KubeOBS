@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI, Depends, Request, Header, HTTPException
 from dotenv import load_dotenv
 import psutil
-
+from datetime import datetime, timezone
 
 load_dotenv()
 ENV_VAR = os.getenv('API_TOKEN')
@@ -49,7 +49,7 @@ def get_nodes():
 def get_system_metrics():
     try:
         cpu_usage = psutil.cpu_percent(interval=None)
-        ram = psutil.vitrual_memory()
+        ram = psutil.virtual_memory()
         disk = psutil.disk_usage('/')
 
         return {
@@ -79,6 +79,13 @@ def get_pods_health():
         
         for i in ret.items:
             restarts = 0
+            age = 0
+
+
+            if i.metadata.creation_timestamp:
+                age = (datetime.now(timezone.utc) - i.metadata.creation_timestamp).total_seconds()
+
+
             if i.status.container_statuses:
                 restarts = i.status.container_statuses[0].restart_count
                 
@@ -87,7 +94,7 @@ def get_pods_health():
                 "namespace": i.metadata.namespace,
                 "status": i.status.phase,
                 "restarts": restarts,
-                "age_seconds": (i.metadata.creation_timestamp.utcnow() - i.metadata.creation_timestamp).total_seconds() if i.metadata.creation_timestamp else 0
+                "age_seconds": round(age)
             })
             
         return {

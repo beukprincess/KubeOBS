@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
@@ -22,11 +20,13 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,9 +42,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
@@ -53,10 +56,17 @@ import java.io.IOException
 @Composable
 fun MetricsScreen(
     navController: NavController,
-    viewModel: MetricsViewModel = viewModel()
+    viewModel: MetricsInitViewModel = viewModel()
 ){
     var displayDialog = remember {mutableStateOf(false)}
     val state by viewModel.uiState.collectAsState()
+    val metricsState by viewModel.metricsState.collectAsState()
+    DisposableEffect(Unit) {
+        viewModel.startPolling()
+        onDispose {
+            viewModel.stopPolling()
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -147,7 +157,7 @@ fun MetricsScreen(
                     OnLoadingMetrics()
                 }
                 is MetricsUIState.SuccessMetrics ->{
-                    OnSuccessMetrics(currentState.data, navController)
+                    OnSuccessMetrics(currentState.data, navController, metricsState)
                 }
                 is MetricsUIState.ErrorMetrics ->{
                     displayDialog.value = true
@@ -173,182 +183,200 @@ fun OnLoadingMetrics(){
 }
 
 @Composable
-fun OnSuccessMetrics(_metricsObject: MetricsResponse?, navController: NavController) {
-    Card(
+fun MetricsCard(data: MetricsResponse?){
+    Column(
         modifier = Modifier
+            .fillMaxSize()
             .padding(horizontal = 20.dp)
-            .fillMaxSize(),
-        shape = RoundedCornerShape(15.dp),
-        border = BorderStroke(2.dp, Color(Colors.kubeColor)),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White,
-        )
-    ){
-        Column(
+            .padding(top = 20.dp)
+    ) {
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp)
-                .padding(top = 20.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ){
-                Text(
-                    text = "CPU loading:",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-                Text(
-                    text = _metricsObject?.metrics?.cpuPercentage.toString(),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-            }
-            Spacer(
-                modifier = Modifier
-                    .height(10.dp)
-                    .fillMaxWidth()
-            )
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ){
             Text(
-                text = "RAM loading: ",
+                text = "CPU loading:",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = UbuntuFamily().ubuntuFamily
             )
-            Row(
-                modifier = Modifier
-                    .padding(start=10.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ){
-                Text(
-                    text = "total volume: ",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-                Text(
-                    text = _metricsObject?.metrics?.ram?.totalGB.toString(),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .padding(start=10.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ){
-                Text(
-                    text = "used volume: ",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-                Text(
-                    text = _metricsObject?.metrics?.ram?.usedGB.toString(),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .padding(start=10.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ){
-                Text(
-                    text = "percentage: ",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-                Text(
-                    text = _metricsObject?.metrics?.ram?.percentage.toString(),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-            }
-            Spacer(
-                modifier = Modifier
-                    .height(10.dp)
-                    .fillMaxWidth()
-            )
             Text(
-                text = "Disk:",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
+                text = data?.metrics?.cpuPercentage.toString(),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Normal,
                 fontFamily = UbuntuFamily().ubuntuFamily
             )
-            Row(
-                modifier = Modifier
-                    .padding(start=10.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ){
-                Text(
-                    text = "total volume: ",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-                Text(
-                    text = _metricsObject?.metrics?.disk?.totalGB.toString(),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .padding(start=10.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ){
-                Text(
-                    text = "free volume: ",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-                Text(
-                    text = _metricsObject?.metrics?.disk?.freeGB.toString(),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .padding(start=10.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ){
-                Text(
-                    text = "percentage: ",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-                Text(
-                    text = _metricsObject?.metrics?.disk?.percentage.toString(),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = UbuntuFamily().ubuntuFamily
-                )
-            }
-            Spacer(
-                modifier = Modifier
-                    .height(10.dp)
-                    .fillMaxWidth()
+        }
+        Spacer(
+            modifier = Modifier
+                .height(10.dp)
+                .fillMaxWidth()
+        )
+        Text(
+            text = "RAM loading: ",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = UbuntuFamily().ubuntuFamily
+        )
+        Row(
+            modifier = Modifier
+                .padding(start=10.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ){
+            Text(
+                text = "total volume: ",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
             )
+            Text(
+                text = data?.metrics?.ram?.totalGB.toString(),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+        }
+        Row(
+            modifier = Modifier
+                .padding(start=10.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ){
+            Text(
+                text = "used volume: ",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+            Text(
+                text = data?.metrics?.ram?.usedGB.toString(),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+        }
+        Row(
+            modifier = Modifier
+                .padding(start=10.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ){
+            Text(
+                text = "percentage: ",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+            Text(
+                text = data?.metrics?.ram?.percentage.toString(),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+        }
+        Spacer(
+            modifier = Modifier
+                .height(10.dp)
+                .fillMaxWidth()
+        )
+        Text(
+            text = "Disk:",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = UbuntuFamily().ubuntuFamily
+        )
+        Row(
+            modifier = Modifier
+                .padding(start=10.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ){
+            Text(
+                text = "total volume: ",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+            Text(
+                text = data?.metrics?.disk?.totalGB.toString(),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+        }
+        Row(
+            modifier = Modifier
+                .padding(start=10.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ){
+            Text(
+                text = "free volume: ",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+            Text(
+                text = data?.metrics?.disk?.freeGB.toString(),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+        }
+        Row(
+            modifier = Modifier
+                .padding(start=10.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ){
+            Text(
+                text = "percentage: ",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+            Text(
+                text = data?.metrics?.disk?.percentage.toString(),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+        }
+        Spacer(
+            modifier = Modifier
+                .height(10.dp)
+                .fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+fun OnSuccessMetrics(
+    _metricsObject: MetricsResponse?,
+    navController: NavController,
+    metricsState: MetricsDataState
+) {
+    when(val currentState = metricsState){
+        is MetricsDataState.LoadingMetricsData ->{
+        }
+        is MetricsDataState.SuccessMetricsData ->{
+            Card(
+                modifier = Modifier
+                    .padding(horizontal = 20.dp)
+                    .fillMaxSize(),
+                shape = RoundedCornerShape(15.dp),
+                border = BorderStroke(2.dp, Color(Colors.kubeColor)),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White,
+                )
+            ){
+                MetricsCard(data = currentState.data)
+            }
+        }
+        is MetricsDataState.ErrorMetricsData ->{
+            Text(text = "Updating error: ${currentState.e}", color = MaterialTheme.colorScheme.error)
         }
     }
 }
@@ -385,12 +413,47 @@ fun OnErrorMetrics(errorMessage: String, _displayDialog: MutableState<Boolean>){
     }
 }
 
-class MetricsViewModel(): ViewModel(){
+class MetricsInitViewModel: ViewModel(){
     private val _uiState = MutableStateFlow<MetricsUIState>(MetricsUIState.LoadingMetrics)
     val uiState: StateFlow<MetricsUIState> = _uiState.asStateFlow()
+    private val _metricsState = MutableStateFlow<MetricsDataState>(MetricsDataState.LoadingMetricsData)
+    val metricsState: StateFlow<MetricsDataState> = _metricsState.asStateFlow()
+    private var pollingJob: Job? = null
 
     init {
         fetchData()
+    }
+
+    fun startPolling() {
+        if (pollingJob?.isActive == true) return
+
+        pollingJob = viewModelScope.launch {
+            while (isActive) {
+                updateData()
+                delay(1000)
+            }
+        }
+    }
+
+    fun stopPolling() {
+        pollingJob?.cancel()
+    }
+
+    private suspend fun updateData() {
+        try {
+            val metricsResponse = RetrofitAPI.instance.getMetrics()
+
+            if (metricsResponse.isSuccessful) {
+                val responseData = metricsResponse.body()
+                _metricsState.value = MetricsDataState.SuccessMetricsData(responseData)
+            } else {
+                _metricsState.value = MetricsDataState.ErrorMetricsData("Error: ${metricsResponse.code()}")
+            }
+        } catch (e: HttpException) {
+            _metricsState.value = MetricsDataState.ErrorMetricsData("Net err: ${e.message}")
+        } catch (e: IOException) {
+            _metricsState.value = MetricsDataState.ErrorMetricsData("Con err: ${e.message}")
+        }
     }
 
     fun fetchData() {
@@ -407,6 +470,7 @@ class MetricsViewModel(): ViewModel(){
                     Log.d("KubeOBS_Network", "Resp body: $responseData")
 
                     _uiState.value = MetricsUIState.SuccessMetrics(responseData)
+                    startPolling()
                 } else {
                     Log.e("KubeOBS_Network", "Server err: ${metricsResponse.errorBody()?.string()}")
                     _uiState.value = MetricsUIState.ErrorMetrics("Error: ${metricsResponse.code()}")

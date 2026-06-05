@@ -20,3 +20,8 @@ sealed interface MetricsUIState{
     data class SuccessMetrics(val data: MetricsResponse?): MetricsUIState
     data class ErrorMetrics(val e: String): MetricsUIState
 }
+sealed interface MetricsDataState{
+    object LoadingMetricsData: MetricsDataState
+    data class SuccessMetricsData(val data: MetricsResponse?): MetricsDataState
+    data class ErrorMetricsData(val e: String): MetricsDataState
+}

@@ -1,5 +1,0 @@
-fastapi
-uvicorn
-kubernetes
-python-dotenv
-psutil==5.9.8

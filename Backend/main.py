@@ -50,7 +50,7 @@ def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     salt = bcrypt.gensalt()
     hashed_password_bytes = bcrypt.hashpw(password_bytes, salt)
 
-    hashed_pwd = hashed_password_bytes('utf-8')
+    hashed_pwd = hashed_password_bytes.decode('utf-8')
 
     new_user = models.User(
         email=user_data.email,

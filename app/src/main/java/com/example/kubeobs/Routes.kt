@@ -5,5 +5,5 @@ object Routes {
     const val MainScreen: String = "MainScreen"
     const val PodScreen: String = "PodScreen"
     const val PodHealthScreen: String = "PodHealthScreen"
-    const val StatScreen: String = "StatScreen"
+    const val MetricsScreen: String = "MetricsScreen"
 }

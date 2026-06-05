@@ -15,4 +15,7 @@ interface RetrofitInterface {
     @Headers("X-Auth-Token: uVuxYa/e8+Ox4rK0pgYY7sCR/ArdAp8eeBIVpxGSlKE=")
     @GET("/pods/health")
     suspend fun getPodsInfo(): Response<PodsInfoResponse>
+    @Headers("X-Auth-Token: uVuxYa/e8+Ox4rK0pgYY7sCR/ArdAp8eeBIVpxGSlKE=")
+    @GET("/system/metrics")
+    suspend fun getMetrics(): Response<MetricsResponse>
 }

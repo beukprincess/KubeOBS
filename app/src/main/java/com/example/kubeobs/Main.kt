@@ -69,42 +69,6 @@ fun MainScreen(
                     )
                 }
             )
-        },
-        bottomBar = {
-            BottomAppBar(
-                containerColor = Color.Transparent,
-                tonalElevation = 0.dp,
-                actions = {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        Button(
-                            colors = ButtonColors(
-                                containerColor = Color(Colors.kubeColor),
-                                contentColor = Color.White,
-                                disabledContainerColor = Color(Colors.kubeColor),
-                                disabledContentColor = Color.White
-                            ),
-                            modifier = Modifier
-                                .padding(end=20.dp, bottom=20.dp)
-                                .size(
-                                    height = 40.dp,
-                                    width = 150.dp
-                                ),
-                            onClick = {}
-                        ) {
-                            Text(
-                                text = "Add cluster",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Normal,
-                                fontFamily = UbuntuFamily().ubuntuFamily
-                            )
-                        }
-                    }
-                }
-            )
         }
     ) { innerPadding ->
         Column(

@@ -40,8 +40,8 @@ fun Navigation(){
                     podIndex = passedPodIndex
                 )
             }
-            composable(Routes.StatScreen){
-                StatScreen(navController = navController)
+            composable(Routes.MetricsScreen){
+                MetricsScreen(navController = navController)
             }
         })
 }

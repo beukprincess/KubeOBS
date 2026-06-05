@@ -15,3 +15,8 @@ sealed interface PodHealthUIState{
     data class SuccessPodHealth(val data: PodsInfoResponse?): PodHealthUIState
     data class ErrorPodHealth(val e: String): PodHealthUIState
 }
+sealed interface MetricsUIState{
+    object LoadingMetrics: MetricsUIState
+    data class SuccessMetrics(val data: MetricsResponse?): MetricsUIState
+    data class ErrorMetrics(val e: String): MetricsUIState
+}

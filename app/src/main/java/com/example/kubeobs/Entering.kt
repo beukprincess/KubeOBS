@@ -174,7 +174,7 @@ fun EnteringScreen(
                             width = 150.dp
                         ),
                     onClick = {
-                        navController.navigate(Routes.MainScreen)
+                        navController.navigate(Routes.MetricsScreen)
                     }
                 ) {
                     Text(
@@ -333,7 +333,7 @@ fun EnteringScreen(
                         ),
                     onClick = {
                         if(signUpValidation(password.text.toString(), validationPassword.text.toString())=="Confirm your password"){
-                            navController.navigate(Routes.MainScreen)
+                            navController.navigate(Routes.MetricsScreen)
                         }
                         else{
                             adviceText=signUpValidation(password.text.toString(), validationPassword.text.toString())

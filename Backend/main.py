@@ -6,7 +6,7 @@ import psutil
 from passlib.context import CryptContext
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import declarative_base, relationship, Session
 import models
 import schemas
 from database import get_db

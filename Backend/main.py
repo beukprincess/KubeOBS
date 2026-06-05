@@ -11,7 +11,7 @@ import models
 import schemas
 from database import get_db
 
-pwd_context = CryptContext(schemas=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 load_dotenv()
 ENV_VAR = os.getenv('API_TOKEN')

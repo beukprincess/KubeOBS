@@ -3,6 +3,7 @@ import os
 from fastapi import FastAPI, Depends, Request, Header, HTTPException
 from dotenv import load_dotenv
 import psutil
+from passlib.context import CryptContext
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import declarative_base, relationship

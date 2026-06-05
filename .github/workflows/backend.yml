@@ -4,9 +4,7 @@ on:
   push:
     branches: [ develop, main ]
     paths:
-      - 'main.py'
-      - 'requirements.txt'
-      - 'Dockerfile'
+      - 'Backend/**'
 
 jobs:
   deploy-backend:
@@ -17,7 +15,7 @@ jobs:
     - name: Build and Import Image to K3s
       run: |
         IMAGE_TAG="k3s-api-server:${{ github.sha }}"
-        docker build -t $IMAGE_TAG .
+        docker build -t $IMAGE_TAG ./Backend
         docker save $IMAGE_TAG | sudo k3s ctr -n k8s.io images import -
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 

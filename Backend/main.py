@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI, Depends, Request, Header, HTTPException, status
 from dotenv import load_dotenv
 import psutil
-from passlib.context import CryptContext
+import bcrypt
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import declarative_base, relationship, Session
@@ -11,7 +11,6 @@ import models
 import schemas
 from database import get_db
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 load_dotenv()
 ENV_VAR = os.getenv('API_TOKEN')
@@ -47,7 +46,11 @@ def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
             detail="Користувач з таким Email вже зареєстрований"
         )
 
-    hashed_pwd = pwd_context.hash(user_data.password)
+    password_bytes = user_data.password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed_password_bytes = bcrypt.hashpw(password_bytes, salt)
+
+    hashed_pwd = hashed_password_bytes('utf-8')
 
     new_user = models.User(
         email=user_data.email,

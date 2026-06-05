@@ -1,6 +1,7 @@
 package com.example.kubeobs
 
 import android.util.Log
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,7 +61,7 @@ fun PodScreen(
             TopAppBar(
                 title= {
                     Text(
-                        text = "KubeOBS",
+                        text = "Your pods",
                         fontSize = 42.sp,
                         fontWeight=FontWeight.Bold,
                         color = Color.Black,
@@ -87,7 +88,7 @@ fun PodScreen(
                                 disabledContentColor = Color.White
                             ),
                             modifier = Modifier
-                                .padding(end=20.dp, bottom=20.dp)
+                                .padding(end = 20.dp, bottom = 20.dp)
                                 .size(
                                     height = 40.dp,
                                     width = 150.dp
@@ -113,14 +114,14 @@ fun PodScreen(
         ){
             when(val currentState = state){
                 is PodsUIState.LoadingPods ->{
-                    OnNodesLoading()
+                    OnPodsLoading()
                 }
                 is PodsUIState.SuccessPods ->{
-                    OnNodesSuccess(currentState.data)
+                    OnPodsSuccess(currentState.data, navController)
                 }
                 is PodsUIState.ErrorPods ->{
                     displayDialog.value = true
-                    OnNodesError(currentState.e, displayDialog)
+                    OnPodsError(currentState.e, displayDialog)
                 }
             }
         }
@@ -128,7 +129,7 @@ fun PodScreen(
 }
 
 @Composable
-fun OnNodesLoading(){
+fun OnPodsLoading(){
     Column(
         modifier = Modifier
             .fillMaxSize(),
@@ -142,14 +143,14 @@ fun OnNodesLoading(){
 }
 
 @Composable
-fun OnNodesSuccess(_podsList: PodsResponse?) {
-    val nodesList = _podsList?.pods ?: emptyList()
+fun OnPodsSuccess(_podsList: PodsResponse?, navController: NavController) {
+    val podsList = _podsList?.pods ?: emptyList()
 
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        if (nodesList.isEmpty()) {
+        if (podsList.isEmpty()) {
             Text(
                 text = "The list is empty",
                 modifier = Modifier.padding(20.dp),
@@ -163,18 +164,18 @@ fun OnNodesSuccess(_podsList: PodsResponse?) {
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(nodesList) { nodeItem ->
+                items(podsList) { podItem ->
                     Card(
                         modifier = Modifier
                             .height(100.dp)
                             .fillMaxWidth(),
                         onClick = {
-                            Log.d("Node", "Clicked!!!")
+                            navController.navigate("${Routes.PodHealthScreen}/${podsList.indexOf(podItem)}")
                         },
                         shape = RoundedCornerShape(15.dp),
+                        border = BorderStroke(2.dp, Color(Colors.kubeColor)),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color(Colors.kubeColor),
-                            contentColor = Color.White,
+                            containerColor = Color.White,
                         )
                     ) {
                         Row(
@@ -184,13 +185,13 @@ fun OnNodesSuccess(_podsList: PodsResponse?) {
                                 modifier = Modifier.padding(start = 10.dp, top = 10.dp)
                             ) {
                                 Text(
-                                    text = "Node:",
+                                    text = "Pod:",
                                     fontSize = 24.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = UbuntuFamily().ubuntuFamily
                                 )
                                 Text(
-                                    text = nodeItem.toString(),
+                                    text = podItem,
                                     fontSize = 22.sp,
                                     fontWeight = FontWeight.Normal,
                                     fontFamily = UbuntuFamily().ubuntuFamily
@@ -205,7 +206,7 @@ fun OnNodesSuccess(_podsList: PodsResponse?) {
 }
 
 @Composable
-fun OnNodesError(errorMessage: String, _displayDialog: MutableState<Boolean>){
+fun OnPodsError(errorMessage: String, _displayDialog: MutableState<Boolean>){
     if(_displayDialog.value){
         AlertDialog(
             title = {
@@ -249,7 +250,7 @@ class PodViewModel(): ViewModel(){
             _uiState.value = PodsUIState.LoadingPods
             try {
                 Log.i("KubeOBS_Network", "Making request...")
-                val podsResponse = RetrofitAPI.instance.getPodsInfo()
+                val podsResponse = RetrofitAPI.instance.getPods()
 
                 if (podsResponse.isSuccessful) {
                     val responseData = podsResponse.body()

@@ -1,5 +1,6 @@
 package com.example.kubeobs
 
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +43,31 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.dp
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.fill
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlin.random.Random
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,6 +77,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
+import kotlin.text.toDouble
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -182,6 +209,7 @@ fun OnLoadingMetrics(){
     }
 }
 
+@SuppressLint("UnrememberedMutableState")
 @Composable
 fun MetricsCard(data: MetricsResponse?){
     Column(
@@ -196,7 +224,7 @@ fun MetricsCard(data: MetricsResponse?){
             horizontalArrangement = Arrangement.SpaceBetween
         ){
             Text(
-                text = "CPU loading:",
+                text = "CPU usage:",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = UbuntuFamily().ubuntuFamily
@@ -213,8 +241,13 @@ fun MetricsCard(data: MetricsResponse?){
                 .height(10.dp)
                 .fillMaxWidth()
         )
+        MetricLiveChart(
+            title = "CPU usage (%)",
+            currentMetric = data?.metrics?.cpuPercentage?.toDouble(),
+            updateTrigger = data
+        )
         Text(
-            text = "RAM loading: ",
+            text = "RAM usage: ",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = UbuntuFamily().ubuntuFamily
@@ -281,8 +314,13 @@ fun MetricsCard(data: MetricsResponse?){
                 .height(10.dp)
                 .fillMaxWidth()
         )
+        MetricLiveChart(
+            title = "RAM usage (%)",
+            currentMetric = data?.metrics?.ram?.percentage?.toDouble(),
+            updateTrigger = data
+        )
         Text(
-            text = "Disk:",
+            text = "Disk usage:",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = UbuntuFamily().ubuntuFamily
@@ -349,6 +387,96 @@ fun MetricsCard(data: MetricsResponse?){
                 .height(10.dp)
                 .fillMaxWidth()
         )
+        MetricLiveChart(
+            title = "Disk usage (%)",
+            currentMetric = data?.metrics?.disk?.percentage?.toDouble(),
+            updateTrigger = data
+        )
+    }
+}
+
+@Composable
+fun MetricLiveChart(
+    title: String,
+    currentMetric: Double?,
+    updateTrigger: Any? // Додаємо тригер для LaunchedEffect
+) {
+    val modelProducer = remember { CartesianChartModelProducer() }
+    val maxVisiblePoints = 60
+
+    val chartData = remember { mutableListOf<Double>() }
+    val stepCounter = remember { intArrayOf(0) }
+
+    LaunchedEffect(updateTrigger) {
+        if (currentMetric != null) {
+            chartData.add(currentMetric)
+            stepCounter[0]++
+
+            if (chartData.size > maxVisiblePoints) {
+                chartData.removeAt(0)
+            }
+
+            val startX = maxOf(0, stepCounter[0] - maxVisiblePoints)
+            val xCoords = List(chartData.size) { startX + it }
+            val yCoords = chartData.toList()
+
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                modelProducer.runTransaction {
+                    lineSeries {
+                        series(x = xCoords, y = yCoords)
+                    }
+                }
+            }
+        }
+    }
+
+    MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(background = Color.Black)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp) // Додамо невеликий відступ між графіками
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = title, // Використовуємо переданий заголовок
+                    color = Color.LightGray,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+
+            val chart = rememberCartesianChart(
+                rememberLineCartesianLayer(
+                    lineProvider = LineCartesianLayer.LineProvider.series(
+                        LineCartesianLayer.rememberLine(
+                            fill = LineCartesianLayer.LineFill.single(fill(Color.Blue)),
+                            areaFill = LineCartesianLayer.AreaFill.single(fill(Color(Colors.kubeColor).copy(alpha = 0.9f)))
+                        )
+                    )
+                ),
+                startAxis = VerticalAxis.rememberStart(
+                    itemPlacer = remember { VerticalAxis.ItemPlacer.step({ 20.0 }) }
+                ),
+                bottomAxis = HorizontalAxis.rememberBottom(
+                    label = null,
+                    guideline = null,
+                    tick = null,
+                    line = null
+                )
+            )
+
+            CartesianChartHost(
+                chart = chart,
+                modelProducer = modelProducer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp),
+                scrollState = rememberVicoScrollState(scrollEnabled = false),
+                animationSpec = null,
+                animateIn = false
+            )
+        }
     }
 }
 
@@ -362,17 +490,22 @@ fun OnSuccessMetrics(
         is MetricsDataState.LoadingMetricsData ->{
         }
         is MetricsDataState.SuccessMetricsData ->{
-            Card(
-                modifier = Modifier
-                    .padding(horizontal = 20.dp)
-                    .fillMaxSize(),
-                shape = RoundedCornerShape(15.dp),
-                border = BorderStroke(2.dp, Color(Colors.kubeColor)),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White,
-                )
-            ){
-                MetricsCard(data = currentState.data)
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Card(
+                    modifier = Modifier
+                        .padding(horizontal = 20.dp)
+                        .fillMaxSize(),
+                    shape = RoundedCornerShape(15.dp),
+                    border = BorderStroke(2.dp, Color(Colors.kubeColor)),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White,
+                    )
+                ){
+                    MetricsCard(data = currentState.data)
+                }
             }
         }
         is MetricsDataState.ErrorMetricsData ->{
@@ -430,7 +563,7 @@ class MetricsInitViewModel: ViewModel(){
         pollingJob = viewModelScope.launch {
             while (isActive) {
                 updateData()
-                delay(1000)
+                delay(500)
             }
         }
     }

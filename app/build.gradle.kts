@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.kubeobs"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -62,6 +62,9 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.9.7")
     implementation("com.squareup.retrofit2:converter-scalars:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("co.yml:ycharts:2.1.0")
+    implementation("com.patrykandpatrick.vico:compose:2.0.1")
+    implementation("com.patrykandpatrick.vico:compose-m3:2.0.1")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

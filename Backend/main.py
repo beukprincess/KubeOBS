@@ -22,7 +22,7 @@ def verify_token(x_auth_token: str = Header(None)):
         raise HTTPException(status_code=401, detail="Error: Unauthorized access")
     return x_auth_token
 
-app = FastAPI(title="Kubeobs API", version="1.0.0")
+app = FastAPI(title="Kubeobs API", version="1.0.1")
 
 
 try:

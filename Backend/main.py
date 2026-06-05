@@ -1,6 +1,6 @@
 from kubernetes import client, config
 import os
-from fastapi import FastAPI, Depends, Request, Header, HTTPException
+from fastapi import FastAPI, Depends, Request, Header, HTTPException, status
 from dotenv import load_dotenv
 import psutil
 from passlib.context import CryptContext

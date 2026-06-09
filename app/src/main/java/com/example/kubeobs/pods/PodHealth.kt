@@ -1,4 +1,4 @@
-package com.example.kubeobs
+package com.example.kubeobs.pods
 
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
@@ -35,6 +35,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.kubeobs.consts.Colors
+import com.example.kubeobs.consts.UbuntuFamily
+import com.example.kubeobs.data.PodHealthUIState
+import com.example.kubeobs.data.PodsInfoResponse
+import com.example.kubeobs.data.RetrofitAPI
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -1,4 +1,4 @@
-package com.example.kubeobs
+package com.example.kubeobs.consts
 
 object Routes {
     const val EnteringScreen: String = "EnteringScreen"

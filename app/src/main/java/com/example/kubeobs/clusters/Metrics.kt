@@ -1,4 +1,4 @@
-package com.example.kubeobs
+package com.example.kubeobs.clusters
 
 import android.annotation.SuppressLint
 import android.util.Log
@@ -43,15 +43,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.ui.unit.dp
+import com.example.kubeobs.consts.Colors
+import com.example.kubeobs.consts.Routes
+import com.example.kubeobs.consts.UbuntuFamily
+import com.example.kubeobs.data.MetricsDataState
+import com.example.kubeobs.data.MetricsResponse
+import com.example.kubeobs.data.MetricsUIState
+import com.example.kubeobs.data.RetrofitAPI
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
@@ -65,19 +64,17 @@ import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlin.random.Random
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.io.IOException
-import kotlin.text.toDouble
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -399,7 +396,7 @@ fun MetricsCard(data: MetricsResponse?){
 fun MetricLiveChart(
     title: String,
     currentMetric: Double?,
-    updateTrigger: Any? // Додаємо тригер для LaunchedEffect
+    updateTrigger: Any?
 ) {
     val modelProducer = remember { CartesianChartModelProducer() }
     val maxVisiblePoints = 60
@@ -420,7 +417,7 @@ fun MetricLiveChart(
             val xCoords = List(chartData.size) { startX + it }
             val yCoords = chartData.toList()
 
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            withContext(Dispatchers.Default) {
                 modelProducer.runTransaction {
                     lineSeries {
                         series(x = xCoords, y = yCoords)
@@ -434,13 +431,13 @@ fun MetricLiveChart(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp) // Додамо невеликий відступ між графіками
+                .padding(vertical = 8.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = title, // Використовуємо переданий заголовок
+                    text = title,
                     color = Color.LightGray,
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -471,7 +468,7 @@ fun MetricLiveChart(
                 modelProducer = modelProducer,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp),
+                    .height(100.dp),
                 scrollState = rememberVicoScrollState(scrollEnabled = false),
                 animationSpec = null,
                 animateIn = false

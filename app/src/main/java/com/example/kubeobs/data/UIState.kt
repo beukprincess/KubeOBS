@@ -1,4 +1,4 @@
-package com.example.kubeobs
+package com.example.kubeobs.data
 
 sealed interface NodesUIState{
     object LoadingNodes: NodesUIState
@@ -24,4 +24,10 @@ sealed interface MetricsDataState{
     object LoadingMetricsData: MetricsDataState
     data class SuccessMetricsData(val data: MetricsResponse?): MetricsDataState
     data class ErrorMetricsData(val e: String): MetricsDataState
+}
+sealed interface RegResultState{
+    object IdleResult: RegResultState
+    object LoadingResult: RegResultState
+    data class SuccessResult(val data: UserResponse?): RegResultState
+    data class ErrorResult(val e: String): RegResultState
 }

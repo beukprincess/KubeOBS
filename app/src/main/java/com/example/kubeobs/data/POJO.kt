@@ -1,4 +1,4 @@
-package com.example.kubeobs
+package com.example.kubeobs.data
 
 import com.google.gson.annotations.SerializedName
 
@@ -48,6 +48,17 @@ data class Disk(
     val freeGB: Float,
     val percentage: Float
 )
+data class RegisterRequest(
+    val email: String,
+    val password: String
+)
+data class UserResponse(
+    val id: Int,
+    val email: String,
+    @SerializedName("is_active")
+    val isActive: Boolean
+)
+
 
 
 

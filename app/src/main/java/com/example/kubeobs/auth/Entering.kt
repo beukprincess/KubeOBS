@@ -1,5 +1,6 @@
-package com.example.kubeobs
+package com.example.kubeobs.auth
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateIntOffsetAsState
 import androidx.compose.animation.core.tween
@@ -24,11 +25,14 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,19 +47,27 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.runBlocking
 import kotlin.math.roundToInt
-import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.kubeobs.consts.Colors
+import com.example.kubeobs.consts.Routes
+import com.example.kubeobs.consts.UbuntuFamily
+import com.example.kubeobs.data.RegResultState
+import com.example.kubeobs.data.RegisterRequest
+import com.example.kubeobs.data.RetrofitAPI
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.jvm.java
 
 @Composable
 fun EnteringScreen(
     navController: NavController,
+    viewModel: RegisterViewModel = viewModel()
 ){
     var isSignUpDisplays by remember { mutableStateOf(false) }
     val slideDur: Int = 500
@@ -94,7 +106,7 @@ fun EnteringScreen(
             animationSpec = tween(durationMillis = visibilityDur)
         )
     ) {
-        val username: TextFieldState = rememberTextFieldState()
+        val email: TextFieldState = rememberTextFieldState()
         val password: TextFieldState = rememberTextFieldState()
         Column(
             modifier = Modifier
@@ -121,12 +133,12 @@ fun EnteringScreen(
                 verticalArrangement = Arrangement.Center
             ){
                 OutlinedTextField(
-                    state = username,
+                    state = email,
                     lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
                     textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
                     label = {
                         Text(
-                            text = "Username",
+                            text = "Email",
                             fontFamily = UbuntuFamily().ubuntuFamily
                         )
                             },
@@ -218,10 +230,18 @@ fun EnteringScreen(
             animationSpec = tween(durationMillis = visibilityDur)
         )
     ) {
-        val username: TextFieldState = rememberTextFieldState()
+        val email: TextFieldState = rememberTextFieldState()
         val password: TextFieldState = rememberTextFieldState()
         val validationPassword: TextFieldState = rememberTextFieldState()
         var adviceText: String by remember { mutableStateOf("Confirm your password") }
+        val regState by viewModel.regRequest.collectAsState()
+        LaunchedEffect(regState) {
+            if (regState is RegResultState.SuccessResult) {
+                navController.navigate(Routes.MetricsScreen) {
+                    popUpTo(0)
+                }
+            }
+        }
         Column(
             modifier = Modifier
                 .offset{
@@ -230,6 +250,21 @@ fun EnteringScreen(
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            when (val currentState = regState) {
+                is RegResultState.IdleResult -> { }
+                is RegResultState.LoadingResult -> {
+                    OnRegLoading()
+                }
+                is RegResultState.ErrorResult -> {
+                    Text(
+                        text = currentState.e,
+                        color = Color.Red,
+                        fontFamily = UbuntuFamily().ubuntuFamily
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+                is RegResultState.SuccessResult -> { }
+            }
             Text(
                 text = "Sign Up",
                 modifier = Modifier
@@ -247,12 +282,12 @@ fun EnteringScreen(
                 verticalArrangement = Arrangement.Center
             ){
                 OutlinedTextField(
-                    state = username,
+                    state = email,
                     lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
                     textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
                     label = {
                         Text(
-                            text = "Username",
+                            text = "Email",
                             fontFamily = UbuntuFamily().ubuntuFamily
                         )
                     },
@@ -332,11 +367,14 @@ fun EnteringScreen(
                             width = 150.dp
                         ),
                     onClick = {
-                        if(signUpValidation(password.text.toString(), validationPassword.text.toString())=="Confirm your password"){
-                            navController.navigate(Routes.MetricsScreen)
-                        }
-                        else{
-                            adviceText=signUpValidation(password.text.toString(), validationPassword.text.toString())
+                        val validationMsg = signUpValidation(password.text.toString(), validationPassword.text.toString())
+                        if (validationMsg == "Confirm your password") {
+                            viewModel.requestForReg(
+                                email = email.text.toString(),
+                                password = password.text.toString()
+                            )
+                        } else {
+                            adviceText = validationMsg
                         }
                     }
                 ) {
@@ -370,30 +408,59 @@ fun EnteringScreen(
     }
 }
 
-fun signUpValidation(pass: String, valPass: String): String = runBlocking{
-    var upperQuantity: Int = 0
-    var lowerQuantity: Int = 0
-    var digitQuantity: Int = 0
-    for (x in 0 until pass.length){
+@Composable
+fun OnRegLoading(){
+    Column(
+        modifier = Modifier
+            .fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ){
+        CircularProgressIndicator(
+            color = Color(Colors.kubeColor)
+        )
+    }
+}
+fun signUpValidation(pass: String, valPass: String): String {
+    var upperQuantity = 0
+    var lowerQuantity = 0
+    var digitQuantity = 0
+    for (x in pass.indices){
         if(pass[x].isUpperCase()){upperQuantity++}
         if(pass[x].isLowerCase()){lowerQuantity++}
         if(pass[x].isDigit()){digitQuantity++}
     }
-    if (pass != valPass){
-        return@runBlocking "Passwords mismatch"
-    }
-    else if(pass.length<8){
-        return@runBlocking "Password has to contain at least 8 symbols"
-    }
-    else if(upperQuantity==0 || lowerQuantity==0 || digitQuantity==0){
-        return@runBlocking "Password has to contain uppercase, lowercase and numbers"
-    }
-    else{
-        return@runBlocking "Confirm your password"
+
+    return when {
+        pass != valPass -> "Passwords mismatch"
+        pass.length < 8 -> "Password has to contain at least 8 symbols"
+        upperQuantity == 0 || lowerQuantity == 0 || digitQuantity == 0 -> "Password has to contain uppercase, lowercase and numbers"
+        else -> "Confirm your password"
     }
 }
 
-
+class RegisterViewModel: ViewModel(){
+    private val _regRequest = MutableStateFlow<RegResultState>(RegResultState.IdleResult)
+    val regRequest: StateFlow<RegResultState> = _regRequest
+    fun requestForReg(email: String, password: String){
+        viewModelScope.launch {
+            try{
+                _regRequest.value = RegResultState.LoadingResult
+                val request = RegisterRequest(email, password)
+                val response = RetrofitAPI.instance.registerUser(request)
+                if(response.isSuccessful){
+                    _regRequest.value = RegResultState.SuccessResult(response.body())
+                    Log.d("Success", "User with id: ${response.body()?.id} was registered!")
+                } else{
+                    _regRequest.value = RegResultState.ErrorResult("Error code: ${response.code()}")
+                    Log.e("ERROR", "Error code: ${response.code()}")
+                }
+            } catch(e: Error) {
+                Log.e("NET", "Network error: $e")
+            }
+        }
+    }
+}
 
 
 

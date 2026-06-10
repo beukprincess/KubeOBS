@@ -17,7 +17,7 @@ jobs:
         cd Backend
         python3 -m venv venv
         source venv/bin/activate
-        pip install fastapi pytest httpx
+        pip install -r requirements.txt
         python3 -m pytest test_main.py
     
     - name: Build and Import Image to K3s

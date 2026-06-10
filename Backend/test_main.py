@@ -8,3 +8,4 @@ def test_security_unauthorized_access():
     assert response.status_code == 401
     assert response.json() == {"detail": "Error: Unauthorized access"}
 
+#

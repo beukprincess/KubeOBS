@@ -21,8 +21,8 @@ jobs:
 
     - name: Update K3s Deployment
       run: |
-        sudo k3s kubectl set image deployment/python-api-deployment api-container=k3s-api-server:${{ github.sha }}
-        sudo k3s kubectl rollout status deployment/python-api-deployment
+        sudo k3s kubectl set image deployment/python-api-deployment api-container=k3s-api-server:${{ github.sha }} -n kubeobs
+        sudo k3s kubectl rollout status deployment/python-api-deployment -n kubeobs
 
     - name: Notify Backend Status
       uses: appleboy/telegram-action@master

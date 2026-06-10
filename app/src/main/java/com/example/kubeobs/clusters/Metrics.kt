@@ -462,7 +462,6 @@ fun MetricLiveChart(
                     line = null
                 )
             )
-
             CartesianChartHost(
                 chart = chart,
                 modelProducer = modelProducer,

@@ -10,6 +10,12 @@ sealed interface PodsUIState{
     data class SuccessPods(val data: PodsResponse?): PodsUIState
     data class ErrorPods(val e: String): PodsUIState
 }
+sealed interface PodsRefState{
+    object IdlePodsRef: PodsRefState
+    object LoadingPodsRef: PodsRefState
+    data class SuccessPodsRef(val data: PodsResponse?): PodsRefState
+    data class ErrorPodsRef(val e: String): PodsRefState
+}
 sealed interface PodHealthUIState{
     object LoadingPodHealth: PodHealthUIState
     data class SuccessPodHealth(val data: PodsInfoResponse?): PodHealthUIState

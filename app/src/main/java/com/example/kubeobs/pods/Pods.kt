@@ -1,5 +1,6 @@
 package com.example.kubeobs.pods
 
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -44,9 +46,11 @@ import androidx.navigation.NavController
 import com.example.kubeobs.consts.Colors
 import com.example.kubeobs.consts.Routes
 import com.example.kubeobs.consts.UbuntuFamily
+import com.example.kubeobs.data.PodsRefState
 import com.example.kubeobs.data.PodsResponse
 import com.example.kubeobs.data.PodsUIState
 import com.example.kubeobs.data.RetrofitAPI
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -148,10 +152,16 @@ fun OnPodsLoading(){
     }
 }
 
+@SuppressLint("UnrememberedMutableState")
 @Composable
-fun OnPodsSuccess(_podsList: PodsResponse?, navController: NavController) {
+fun OnPodsSuccess(
+    _podsList: PodsResponse?,
+    navController: NavController,
+    viewModel: PodViewModel = viewModel()
+) {
     val podsList = _podsList?.pods ?: emptyList()
-
+    val refState by viewModel.refState.collectAsState()
+    val isRefing = refState is PodsRefState.LoadingPodsRef
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -164,44 +174,49 @@ fun OnPodsSuccess(_podsList: PodsResponse?, navController: NavController) {
                 fontFamily = UbuntuFamily().ubuntuFamily
             )
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            PullToRefreshBox(
+                isRefreshing = isRefing,
+                onRefresh = { viewModel.startRefreshing() }
             ) {
-                items(podsList) { podItem ->
-                    Card(
-                        modifier = Modifier
-                            .height(100.dp)
-                            .fillMaxWidth(),
-                        onClick = {
-                            navController.navigate("${Routes.PodHealthScreen}/${podsList.indexOf(podItem)}")
-                        },
-                        shape = RoundedCornerShape(15.dp),
-                        border = BorderStroke(2.dp, Color(Colors.kubeColor)),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color.White,
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxSize()
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(podsList) { podItem ->
+                        Card(
+                            modifier = Modifier
+                                .height(100.dp)
+                                .fillMaxWidth(),
+                            onClick = {
+                                navController.navigate("${Routes.PodHealthScreen}/${podsList.indexOf(podItem)}")
+                            },
+                            shape = RoundedCornerShape(15.dp),
+                            border = BorderStroke(2.dp, Color(Colors.kubeColor)),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.White,
+                            )
                         ) {
-                            Column(
-                                modifier = Modifier.padding(start = 10.dp, top = 10.dp)
+                            Row(
+                                modifier = Modifier.fillMaxSize()
                             ) {
-                                Text(
-                                    text = "Pod:",
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = UbuntuFamily().ubuntuFamily
-                                )
-                                Text(
-                                    text = podItem,
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Normal,
-                                    fontFamily = UbuntuFamily().ubuntuFamily
-                                )
+                                Column(
+                                    modifier = Modifier.padding(start = 10.dp, top = 10.dp)
+                                ) {
+                                    Text(
+                                        text = "Pod:",
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = UbuntuFamily().ubuntuFamily
+                                    )
+                                    Text(
+                                        text = podItem,
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.Normal,
+                                        fontFamily = UbuntuFamily().ubuntuFamily
+                                    )
+                                }
                             }
                         }
                     }
@@ -243,9 +258,35 @@ fun OnPodsError(errorMessage: String, _displayDialog: MutableState<Boolean>){
     }
 }
 
-class PodViewModel(): ViewModel(){
+class PodViewModel: ViewModel(){
+    private val _refState = MutableStateFlow<PodsRefState>(PodsRefState.IdlePodsRef)
+    val refState: StateFlow<PodsRefState> = _refState.asStateFlow()
     private val _uiState = MutableStateFlow<PodsUIState>(PodsUIState.LoadingPods)
     val uiState: StateFlow<PodsUIState> = _uiState.asStateFlow()
+    private var refreshingJob: Job? = null
+
+    fun startRefreshing(){
+        if(refreshingJob?.isActive == true) return
+        refreshingJob = viewModelScope.launch {
+            refreshData()
+        }
+    }
+
+    private suspend fun refreshData(){
+        _refState.value = PodsRefState.LoadingPodsRef
+        try{
+            val refResponse = RetrofitAPI.instance.getPods()
+            if (refResponse.isSuccessful){
+                val responseData = refResponse.body()
+                _uiState.value = PodsUIState.SuccessPods(responseData)
+                _refState.value = PodsRefState.SuccessPodsRef(responseData)
+            } else{
+                _refState.value = PodsRefState.ErrorPodsRef("Error code: ${refResponse.code()}")
+            }
+        } catch(e: Exception) {
+            Log.e("ERROR","Network error")
+        }
+    }
 
     init {
         fetchData()

@@ -13,3 +13,24 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class UserInfo(BaseModel):
+    id: int
+    email: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserInfo
+
+class ClusterResponse(BaseModel):
+    id: int
+    name: str
+    endpoint_url: str
+    user_id: int
+
+    class Config:
+        from_attributes = True

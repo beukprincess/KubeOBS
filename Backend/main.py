@@ -2,9 +2,10 @@ from kubernetes import client, config
 import os
 from fastapi import FastAPI, Depends, Request, Header, HTTPException, status
 from dotenv import load_dotenv
+import jwt
 import psutil
 import bcrypt
-from datetime import datetime, timezone
+from datetime import timedelta,datetime, timezone
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import declarative_base, relationship, Session
 import models
@@ -14,12 +15,39 @@ from database import get_db
 
 load_dotenv()
 ENV_VAR = os.getenv('API_TOKEN')
+JWT_SECRET = os.getenv("JWT_SECRET")
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
 Base = declarative_base()
 
 def verify_token(x_auth_token: str = Header(None)):
     if not ENV_VAR or x_auth_token != ENV_VAR:
         raise HTTPException(status_code=401, detail="Error: Unauthorized access")
     return x_auth_token
+
+def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="No Header Authorization")
+    
+    try:
+        token_type, token = authorization.split(" ")
+        if token_type.lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Error: Invalid token type. Use Bearer")
+        
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id: int = payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Error: Invalid token: missing user_id")
+            
+    except (ValueError, jwt.PyJWTError):
+        raise HTTPException(status_code=401, detail="Error: Invalid or expired token")
+        
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="Error: User not found")
+        
+    return user
 
 app = FastAPI(title="Kubeobs API", version="1.0.1")
 
@@ -44,7 +72,7 @@ def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Користувач з таким Email вже зареєстрований"
+            detail="Error: User with this Email already registered"
         )
 
     password_bytes = user_data.password.encode('utf-8')
@@ -63,7 +91,101 @@ def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
 
     return new_user
 
+@app.post("/auth/login", response_model=schemas.TokenResponse)
+def login_user(user_credentials: schemas.UserLogin, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == user_credentials.email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Error: Check password or email"
+        )
+
+    password_bytes = user_credentials.password.encode('utf-8')
+    hashed_password_bytes = user.hashed_password.encode('utf-8')
+    
+    if not bcrypt.checkpw(password_bytes, hashed_password_bytes):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Error: Check password or email"
+        )
+
+    #jwt creation
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode = {"user_id": user.id, "exp": expire}
+    encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+    return {
+        "access_token": encoded_jwt,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email
+        }
+    }
+
 # --- Secured X-Headers ---
+
+@app.get("/clusters/{cluster_id}/metrics")
+def get_dynamic_cluster_metrics(
+    cluster_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    cluster = db.query(models.Cluster).filter(models.Cluster.id == cluster_id).first()
+    if not cluster:
+        raise HTTPException(status_code=404, detail="Кластер не знайдено")
+        
+    if cluster.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Доступ заборонено: це не ваш кластер")
+        
+    try:
+        configuration = client.Configuration()
+        configuration.host = cluster.endpoint_url  
+        configuration.verify_ssl = False 
+        configuration.api_key = {"authorization": f"Bearer {cluster.cluster_token}"}
+        
+        dynamic_client = client.ApiClient(configuration)
+        dynamic_custom_api = client.CustomObjectsApi(dynamic_client)
+        
+        raw_metrics = dynamic_custom_api.list_cluster_custom_object(
+            group="metrics.k8s.io",
+            version="v1beta1",
+            plural="nodes"
+        )
+        
+        nodes_summary = []
+        for item in raw_metrics.get("items", []):
+            node_name = item["metadata"]["name"]
+            cpu_raw = item["usage"]["cpu"]       
+            mem_raw = item["usage"]["memory"]    
+            
+            cpu_cores = int(cpu_raw.replace("n", "")) / 1_000_000_000 if "n" in cpu_raw else 0
+            mem_numeric = int(mem_raw.replace("Ki", "")) / 1024 if "Ki" in mem_raw else 0
+            
+            nodes_summary.append({
+                "node_name": node_name,
+                "cpu_usage_cores": round(cpu_cores, 3),
+                "memory_used_mb": round(mem_numeric, 2)
+            })
+            
+        return {
+            "status": "success",
+            "cluster_id": cluster_id,
+            "cluster_name": cluster.name,
+            "cluster_metrics": nodes_summary
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Не вдалося підключитися до кластера або зняти метрики: {str(e)}"
+        )
+
+@app.get("/clusters", response_model=list[schemas.ClusterResponse])
+def get_user_clusters(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    clusters = db.query(models.Cluster).filter(models.Cluster.user_id == current_user.id).all()
+    return clusters
+
 @app.get("/pods", dependencies=[Depends(verify_token)])
 def get_pods():
     try:

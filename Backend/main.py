@@ -96,7 +96,6 @@ def get_system_metrics():
             cpu_raw = item["usage"]["cpu"]       
             mem_raw = item["usage"]["memory"]    
             
-            # Конвертація пам'яті в мегабайти (відкидаємо 'Ki' та ділимо на 1024)
             mem_numeric = int(mem_raw.replace("Ki", "")) / 1024 if "Ki" in mem_raw else 0
             
             nodes_summary.append({

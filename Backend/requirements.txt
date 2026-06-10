@@ -9,3 +9,4 @@ pydantic[email]>=2.0
 passlib[bcrypt]>=1.7.4
 redis>=5.0.0
 pytest
+httpx

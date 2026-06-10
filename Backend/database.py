@@ -5,10 +5,12 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise RuntimeError(
-        "URL Error."
-        "ERROR"
-    )
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/kubeobs_test_db"
+    else:
+        raise RuntimeError(
+            "URL Error."
+        )
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

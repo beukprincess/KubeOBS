@@ -20,11 +20,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,9 +43,12 @@ import com.example.kubeobs.consts.UbuntuFamily
 import com.example.kubeobs.data.PodHealthUIState
 import com.example.kubeobs.data.PodsInfoResponse
 import com.example.kubeobs.data.RetrofitAPI
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
@@ -107,14 +113,25 @@ fun OnPodHealthLoading(){
 }
 
 @Composable
-fun OnPodHealthSuccess(_podsInfo: PodsInfoResponse?, podIndex: Int) {
+fun OnPodHealthSuccess(
+    _podsInfo: PodsInfoResponse?,
+    podIndex: Int,
+    viewModel: PodHealthViewModel = viewModel()
+) {
     val podsList = _podsInfo?.pods ?: emptyList()
     val currentPod = podsList[podIndex].toString().slice(podsList[podIndex].toString().indexOf("name")..podsList[podIndex].toString().length-2)
     val currentPodName = currentPod.slice(currentPod.indexOf("name")+5..currentPod.indexOf("namespace")-3)
     val currentPodNamespace = currentPod.slice(currentPod.indexOf("namespace")+10..currentPod.indexOf("status")-3)
     val currentPodStatus = currentPod.slice(currentPod.indexOf("status")+7..currentPod.indexOf("restarts")-3)
     val currentPodRestarts = currentPod.slice(currentPod.indexOf("restarts")+9..currentPod.indexOf("ageSeconds")-3).toInt()
-    val currentPodAgeSeconds = currentPod.slice(currentPod.indexOf("ageSeconds")+11..<currentPod.length).toInt()
+    var podAgeSeconds by remember { mutableIntStateOf(currentPod.slice(currentPod.indexOf("ageSeconds")+11..<currentPod.length).toInt()) }
+    val ageSeconds by viewModel.ageSeconds.collectAsState()
+    DisposableEffect(Unit) {
+        viewModel.startPolling(podAgeSeconds)
+        onDispose {
+            viewModel.stopPolling()
+        }
+    }
     Column(
         modifier = Modifier
             .padding(horizontal = 20.dp)
@@ -229,7 +246,7 @@ fun OnPodHealthSuccess(_podsInfo: PodsInfoResponse?, podIndex: Int) {
                         fontFamily = UbuntuFamily().ubuntuFamily
                     )
                     Text(
-                        text = currentPodAgeSeconds.toString(),
+                        text = ageSeconds.toString(),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Normal,
                         fontFamily = UbuntuFamily().ubuntuFamily
@@ -277,9 +294,27 @@ fun OnPodHealthError(errorMessage: String, _displayDialog: MutableState<Boolean>
     }
 }
 
-class PodHealthViewModel(): ViewModel(){
+class PodHealthViewModel: ViewModel(){
+    private val _ageSeconds = MutableStateFlow(0)
+    val ageSeconds: StateFlow<Int> = _ageSeconds.asStateFlow()
     private val _uiState = MutableStateFlow<PodHealthUIState>(PodHealthUIState.LoadingPodHealth)
     val uiState: StateFlow<PodHealthUIState> = _uiState.asStateFlow()
+    private var pollingJob: Job? = null
+
+    fun startPolling(initialAge: Int){
+        if(pollingJob?.isActive == true) return
+        _ageSeconds.value = initialAge
+        pollingJob = viewModelScope.launch{
+            while(isActive){
+                delay(1000)
+                _ageSeconds.value++
+            }
+        }
+    }
+
+    fun stopPolling(){
+        pollingJob?.cancel()
+    }
 
     init {
         fetchData()

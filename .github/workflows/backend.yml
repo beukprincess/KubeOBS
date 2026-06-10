@@ -12,6 +12,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Run Unit Tests
+      run: |
+        cd Backend
+        python3 -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
+        pytest test_main.py
+    
     - name: Build and Import Image to K3s
       run: |
         IMAGE_TAG="k3s-api-server:${{ github.sha }}"

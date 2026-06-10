@@ -35,6 +35,7 @@ except Exception as e:
     print(f"Error cfg {e}")
 
 v1 = client.CoreV1Api()
+custom_api = client.CustomObjectsApi()
 
 
 @app.post("/auth/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
@@ -51,7 +52,7 @@ def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     hashed_password_bytes = bcrypt.hashpw(password_bytes, salt)
 
     hashed_pwd = hashed_password_bytes.decode('utf-8')
-
+    
     new_user = models.User(
         email=user_data.email,
         hashed_password=hashed_pwd
@@ -82,25 +83,33 @@ def get_nodes():
 @app.get("/system/metrics", dependencies=[Depends(verify_token)])
 def get_system_metrics():
     try:
-        cpu_usage = psutil.cpu_percent(interval=None)
-        ram = psutil.virtual_memory()
-        disk = psutil.disk_usage('/')
-
+        raw_metrics = custom_api.list_cluster_custom_object(
+            group="metrics.k8s.io",
+            version="v1beta1",
+            plural="nodes"
+        )
+        
+        nodes_summary = []
+        
+        for item in raw_metrics.get("items", []):
+            node_name = item["metadata"]["name"]
+            cpu_raw = item["usage"]["cpu"]       
+            mem_raw = item["usage"]["memory"]    
+            
+            # Конвертація пам'яті в мегабайти (відкидаємо 'Ki' та ділимо на 1024)
+            mem_numeric = int(mem_raw.replace("Ki", "")) / 1024 if "Ki" in mem_raw else 0
+            
+            nodes_summary.append({
+                "node_name": node_name,
+                "cpu_usage": cpu_raw,
+                "memory_used_mb": round(mem_numeric, 2)
+            })
+            
         return {
-                "status": "success",
-                "metrics": {
-                    "cpu_percentage": cpu_usage,
-                    "ram":{
-                        "total_gb": round(ram.total / (1024**3), 2),
-                        "used_gb": round(ram.used / (1024**3), 2),
-                        "percentage": ram.percent
-                        },
-                    "disk":{
-                        "total_gb": round(disk.total / (1024**3), 2),
-                        "free_gb": round(disk.free / (1024**3), 2),
-                        "percentage": disk.percent
-                        }
-                }
+            "status": "success",
+            "source": "K3s Metrics Server",
+            "nodes_count": len(nodes_summary),
+            "cluster_metrics": nodes_summary
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -138,6 +147,23 @@ def get_pods_health():
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@app.get("/pods/{namespace}/{pod_name}/logs", dependencies=[Depends(verify_token)])
+def get_pod_logs(namespace: str, pod_name: str, tail: int = 50):
+    try:
+        logs = v1.read_namespaced_pod_log(
+            name=pod_name, 
+            namespace=namespace, 
+            tail_lines=tail
+        )
+        return {
+            "status": "success", 
+            "namespace": namespace,
+            "pod": pod_name, 
+            "logs": logs
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"Log read error: {str(e)}"}
 
 @app.get("/services", dependencies=[Depends(verify_token)])
 def get_services():

@@ -3,6 +3,7 @@ package com.example.kubeobs.clusters
 import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -103,7 +104,7 @@ fun MetricsScreen(
                             text = "KubeOBS",
                             fontSize = 42.sp,
                             fontWeight=FontWeight.Bold,
-                            color = Color.Black,
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontFamily = UbuntuFamily().ubuntuFamily
                         )
                         Button(
@@ -175,6 +176,7 @@ fun MetricsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.background),
         ){
             when(val currentState = state){
                 is MetricsUIState.LoadingMetrics ->{
@@ -214,6 +216,7 @@ fun MetricsCard(data: MetricsResponse?){
             .fillMaxSize()
             .padding(horizontal = 20.dp)
             .padding(top = 20.dp)
+            .background(MaterialTheme.colorScheme.background),
     ) {
         Row(
             modifier = Modifier
@@ -497,7 +500,7 @@ fun OnSuccessMetrics(
                     shape = RoundedCornerShape(15.dp),
                     border = BorderStroke(2.dp, Color(Colors.kubeColor)),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color.White,
+                        containerColor = MaterialTheme.colorScheme.background,
                     )
                 ){
                     MetricsCard(data = currentState.data)

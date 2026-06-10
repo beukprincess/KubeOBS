@@ -8,6 +8,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,7 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -113,7 +115,8 @@ fun EnteringScreen(
                 .offset{
                     offset
                 }
-                .fillMaxSize(),
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -122,7 +125,7 @@ fun EnteringScreen(
                     .padding(top=50.dp),
                 fontSize = 42.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontFamily = UbuntuFamily().ubuntuFamily
             )
             Column(
@@ -135,7 +138,7 @@ fun EnteringScreen(
                 OutlinedTextField(
                     state = email,
                     lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
-                    textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
                     label = {
                         Text(
                             text = "Email",
@@ -143,17 +146,17 @@ fun EnteringScreen(
                         )
                             },
                     colors = OutlinedTextFieldDefaults.colors(
-                        disabledBorderColor = Color(Colors.kubeColor),
-                        errorBorderColor = Color(Colors.kubeColor),
-                        focusedBorderColor = Color(Colors.kubeColor),
-                        unfocusedBorderColor = Color(Colors.kubeColor)
+                        disabledBorderColor = MaterialTheme.colorScheme.primary,
+                        errorBorderColor = MaterialTheme.colorScheme.primary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.primary
                     ),
                     shape = RoundedCornerShape(10.dp)
                 )
                 OutlinedTextField(
                     state = password,
                     lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
-                    textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
                     label = {
                         Text(
                             text = "Password",
@@ -161,10 +164,10 @@ fun EnteringScreen(
                         )
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        disabledBorderColor = Color(Colors.kubeColor),
-                        errorBorderColor = Color(Colors.kubeColor),
-                        focusedBorderColor = Color(Colors.kubeColor),
-                        unfocusedBorderColor = Color(Colors.kubeColor)
+                        disabledBorderColor = MaterialTheme.colorScheme.primary,
+                        errorBorderColor = MaterialTheme.colorScheme.primary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.primary
                     ),
                     shape = RoundedCornerShape(10.dp)
                 )
@@ -175,9 +178,9 @@ fun EnteringScreen(
                 )
                 Button(
                     colors = ButtonColors(
-                        containerColor = Color(Colors.kubeColor),
+                        containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = Color.White,
-                        disabledContainerColor = Color(Colors.kubeColor),
+                        disabledContainerColor = MaterialTheme.colorScheme.primary,
                         disabledContentColor = Color.White
                     ),
                     modifier = Modifier
@@ -193,13 +196,14 @@ fun EnteringScreen(
                         text = "Log In",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Normal,
+                        color = Color.White,
                         fontFamily = UbuntuFamily().ubuntuFamily
                     )
                 }
             }
             Text(
                 text = "Have no account?",
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Normal,
                 fontFamily = UbuntuFamily().ubuntuFamily
             )
@@ -210,7 +214,7 @@ fun EnteringScreen(
             ) {
                 Text(
                     text = "Sign up",
-                    color = Color(Colors.kubeColor),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Normal,
                     fontFamily = UbuntuFamily().ubuntuFamily
                 )
@@ -247,7 +251,8 @@ fun EnteringScreen(
                 .offset{
                     offsetA
                 }
-                .fillMaxSize(),
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             when (val currentState = regState) {
@@ -271,7 +276,7 @@ fun EnteringScreen(
                     .padding(top=50.dp),
                 fontSize = 42.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontFamily = UbuntuFamily().ubuntuFamily
             )
             Column(
@@ -284,7 +289,7 @@ fun EnteringScreen(
                 OutlinedTextField(
                     state = email,
                     lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
-                    textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
                     label = {
                         Text(
                             text = "Email",
@@ -292,17 +297,17 @@ fun EnteringScreen(
                         )
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        disabledBorderColor = Color(Colors.kubeColor),
-                        errorBorderColor = Color(Colors.kubeColor),
-                        focusedBorderColor = Color(Colors.kubeColor),
-                        unfocusedBorderColor = Color(Colors.kubeColor)
+                        disabledBorderColor = MaterialTheme.colorScheme.primary,
+                        errorBorderColor = MaterialTheme.colorScheme.primary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.primary
                     ),
                     shape = RoundedCornerShape(10.dp)
                 )
                 OutlinedTextField(
                     state = password,
                     lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
-                    textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
                     label = {
                         Text(
                             text = "Password",
@@ -310,10 +315,10 @@ fun EnteringScreen(
                         )
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        disabledBorderColor = Color(Colors.kubeColor),
-                        errorBorderColor = Color(Colors.kubeColor),
-                        focusedBorderColor = Color(Colors.kubeColor),
-                        unfocusedBorderColor = Color(Colors.kubeColor)
+                        disabledBorderColor = MaterialTheme.colorScheme.primary,
+                        errorBorderColor = MaterialTheme.colorScheme.primary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.primary
                     ),
                     shape = RoundedCornerShape(10.dp)
                 )
@@ -328,13 +333,14 @@ fun EnteringScreen(
                     Text(
                         text = adviceText,
                         fontWeight = FontWeight.Normal,
-                        fontFamily = UbuntuFamily().ubuntuFamily
+                        fontFamily = UbuntuFamily().ubuntuFamily,
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 OutlinedTextField(
                     state = validationPassword,
                     lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
-                    textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
                     label = {
                         Text(
                             text = "Rewrite password",
@@ -342,10 +348,10 @@ fun EnteringScreen(
                         )
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        disabledBorderColor = Color(Colors.kubeColor),
-                        errorBorderColor = Color(Colors.kubeColor),
-                        focusedBorderColor = Color(Colors.kubeColor),
-                        unfocusedBorderColor = Color(Colors.kubeColor)
+                        disabledBorderColor = MaterialTheme.colorScheme.primary,
+                        errorBorderColor = MaterialTheme.colorScheme.primary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.primary
                     ),
                     shape = RoundedCornerShape(10.dp)
                 )
@@ -356,9 +362,9 @@ fun EnteringScreen(
                 )
                 Button(
                     colors = ButtonColors(
-                        containerColor = Color(Colors.kubeColor),
+                        containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = Color.White,
-                        disabledContainerColor = Color(Colors.kubeColor),
+                        disabledContainerColor = MaterialTheme.colorScheme.primary,
                         disabledContentColor = Color.White
                     ),
                     modifier = Modifier
@@ -380,6 +386,7 @@ fun EnteringScreen(
                 ) {
                     Text(
                         text = "Sign Up",
+                        color = Color.White,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Normal,
                         fontFamily = UbuntuFamily().ubuntuFamily
@@ -388,7 +395,7 @@ fun EnteringScreen(
             }
             Text(
                 text = "Have an account?",
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Normal,
                 fontFamily = UbuntuFamily().ubuntuFamily
             )
@@ -399,7 +406,7 @@ fun EnteringScreen(
             ) {
                 Text(
                     text = "Log In",
-                    color = Color(Colors.kubeColor),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Normal,
                     fontFamily = UbuntuFamily().ubuntuFamily
                 )
@@ -417,7 +424,7 @@ fun OnRegLoading(){
         verticalArrangement = Arrangement.Center
     ){
         CircularProgressIndicator(
-            color = Color(Colors.kubeColor)
+            color = MaterialTheme.colorScheme.primary
         )
     }
 }

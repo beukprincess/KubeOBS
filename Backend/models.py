@@ -46,5 +46,5 @@ class Cluster(Base):
     name = Column(String(100), nullable=False, unique=True)
     endpoint_url = Column(String(255), nullable=False)
     cluster_token = Column(String(1000), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))

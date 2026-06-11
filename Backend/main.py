@@ -1,6 +1,7 @@
 from kubernetes import client, config
 import os
 from fastapi import FastAPI, Depends, Request, Header, HTTPException, status
+from fastapi.security import HTTPBearer
 from dotenv import load_dotenv
 import jwt
 import psutil
@@ -14,10 +15,10 @@ from database import get_db, engine
 
 
 load_dotenv()
-ENV_VAR = os.getenv('API_TOKEN')
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+security = HTTPBearer()
 app = FastAPI(title="Kubeobs API", version="1.0.1")
 
 Base = declarative_base()
@@ -31,27 +32,20 @@ def verify_token(x_auth_token: str = Header(None)):
         raise HTTPException(status_code=401, detail="Error: Unauthorized access")
     return x_auth_token
 
-def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="No Header Authorization")
-    
+def get_current_user(token: str = Depends(security), db: Session = Depends(get_db)):
+
     try:
-        token_type, token = authorization.split(" ")
-        if token_type.lower() != "bearer":
-            raise HTTPException(status_code=401, detail="Error: Invalid token type. Use Bearer")
-        
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         user_id: int = payload.get("user_id")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Error: Invalid token: missing user_id")
-            
-    except (ValueError, jwt.PyJWTError):
+    except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Error: Invalid or expired token")
-        
+
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=401, detail="Error: User not found")
-        
+
     return user
 
 
@@ -129,116 +123,36 @@ def login_user(user_credentials: schemas.UserLogin, db: Session = Depends(get_db
 
 # --- Secured X-Headers ---
 
-@app.get("/clusters/{cluster_id}/metrics")
-def get_dynamic_cluster_metrics(
-    cluster_id: int, 
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    cluster = db.query(models.Cluster).filter(models.Cluster.id == cluster_id).first()
-    if not cluster:
-        raise HTTPException(status_code=404, detail="Кластер не знайдено")
-        
-    if cluster.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Доступ заборонено: це не ваш кластер")
-        
-    try:
-        configuration = client.Configuration()
-        configuration.host = cluster.endpoint_url  
-        configuration.verify_ssl = False 
-        configuration.api_key = {"authorization": f"Bearer {cluster.cluster_token}"}
-        
-        dynamic_client = client.ApiClient(configuration)
-        dynamic_custom_api = client.CustomObjectsApi(dynamic_client)
-        
-        raw_metrics = dynamic_custom_api.list_cluster_custom_object(
-            group="metrics.k8s.io",
-            version="v1beta1",
-            plural="nodes"
-        )
-        
-        nodes_summary = []
-        for item in raw_metrics.get("items", []):
-            node_name = item["metadata"]["name"]
-            cpu_raw = item["usage"]["cpu"]       
-            mem_raw = item["usage"]["memory"]    
-            
-            cpu_cores = int(cpu_raw.replace("n", "")) / 1_000_000_000 if "n" in cpu_raw else 0
-            mem_numeric = int(mem_raw.replace("Ki", "")) / 1024 if "Ki" in mem_raw else 0
-            
-            nodes_summary.append({
-                "node_name": node_name,
-                "cpu_usage_cores": round(cpu_cores, 3),
-                "memory_used_mb": round(mem_numeric, 2)
-            })
-            
-        return {
-            "status": "success",
-            "cluster_id": cluster_id,
-            "cluster_name": cluster.name,
-            "cluster_metrics": nodes_summary
-        }
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Не вдалося підключитися до кластера або зняти метрики: {str(e)}"
-        )
 
-@app.get("/clusters", response_model=list[schemas.ClusterResponse])
-def get_user_clusters(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    clusters = db.query(models.Cluster).filter(models.Cluster.user_id == current_user.id).all()
-    return clusters
-
-@app.post("/clusters", response_model=schemas.ClusterResponse, status_code=status.HTTP_201_CREATED)
-def add_cluster(
-    cluster_data: schemas.ClusterCreate, 
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    new_cluster = models.Cluster(
-        name=cluster_data.name,
-        endpoint_url=cluster_data.endpoint_url,
-        cluster_token=cluster_data.cluster_token,
-        user_id=current_user.id
-    )
-    db.add(new_cluster)
-    db.commit()
-    db.refresh(new_cluster)
-    return new_cluster
-
-@app.get("/pods", dependencies=[Depends(verify_token)])
-def get_pods():
+@app.get("/pods")
+def get_pods(current_user: models.User = Depends(get_current_user)):
     try:
         pods = v1.list_pod_for_all_namespaces(watch=False)
         return {"status": "success", "pods": [n.metadata.name for n in pods.items]}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@app.get("/nodes", dependencies=[Depends(verify_token)])
-def get_nodes():
+@app.get("/nodes")
+def get_nodes(current_user: models.User = Depends(get_current_user)):
     try:
         nodes = v1.list_node()
         return {"status": "success", "nodes": [n.metadata.name for n in nodes.items]}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@app.get("/system/metrics", dependencies=[Depends(verify_token)])
-def get_system_metrics():
+@app.get("/system/metrics")
+def get_system_metrics(current_user: models.User = Depends(get_current_user)):
     try:
         raw_metrics = custom_api.list_cluster_custom_object(
             group="metrics.k8s.io",
             version="v1beta1",
             plural="nodes"
         )
-        
         nodes_summary = []
-        
         for item in raw_metrics.get("items", []):
             node_name = item["metadata"]["name"]
             cpu_raw = item["usage"]["cpu"]       
             mem_raw = item["usage"]["memory"]    
-            
             mem_numeric = int(mem_raw.replace("Ki", "")) / 1024 if "Ki" in mem_raw else 0
             
             nodes_summary.append({
@@ -246,7 +160,6 @@ def get_system_metrics():
                 "cpu_usage": cpu_raw,
                 "memory_used_mb": round(mem_numeric, 2)
             })
-            
         return {
             "status": "success",
             "source": "K3s Metrics Server",
@@ -255,22 +168,17 @@ def get_system_metrics():
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
-##
-@app.get("/pods/health", dependencies=[Depends(verify_token)])
-def get_pods_health():
+
+@app.get("/pods/health")
+def get_pods_health(current_user: models.User = Depends(get_current_user)):
     try:
         ret = v1.list_pod_for_all_namespaces(watch=False)
         detailed_pods = []
-        
         for i in ret.items:
             restarts = 0
             age = 0
-
-
             if i.metadata.creation_timestamp:
                 age = (datetime.now(timezone.utc) - i.metadata.creation_timestamp).total_seconds()
-
-
             if i.status.container_statuses:
                 restarts = i.status.container_statuses[0].restart_count
                 
@@ -281,34 +189,20 @@ def get_pods_health():
                 "restarts": restarts,
                 "age_seconds": round(age)
             })
-            
-        return {
-            "status": "success",
-            "total_pods": len(detailed_pods),
-            "pods": detailed_pods
-        }
+        return {"status": "success", "total_pods": len(detailed_pods), "pods": detailed_pods}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@app.get("/pods/{namespace}/{pod_name}/logs", dependencies=[Depends(verify_token)])
-def get_pod_logs(namespace: str, pod_name: str, tail: int = 50):
+@app.get("/pods/{namespace}/{pod_name}/logs")
+def get_pod_logs(namespace: str, pod_name: str, tail: int = 50, current_user: models.User = Depends(get_current_user)):
     try:
-        logs = v1.read_namespaced_pod_log(
-            name=pod_name, 
-            namespace=namespace, 
-            tail_lines=tail
-        )
-        return {
-            "status": "success", 
-            "namespace": namespace,
-            "pod": pod_name, 
-            "logs": logs
-        }
+        logs = v1.read_namespaced_pod_log(name=pod_name, namespace=namespace, tail_lines=tail)
+        return {"status": "success", "namespace": namespace, "pod": pod_name, "logs": logs}
     except Exception as e:
         return {"status": "error", "message": f"Log read error: {str(e)}"}
 
-@app.get("/services", dependencies=[Depends(verify_token)])
-def get_services():
+@app.get("/services")
+def get_services(current_user: models.User = Depends(get_current_user)):
     try:
         return {"status": "success"}
     except Exception as e:

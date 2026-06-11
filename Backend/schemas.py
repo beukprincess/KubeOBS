@@ -1,7 +1,11 @@
 from pydantic import BaseModel, EmailStr
 
 #
-
+class ClusterCreate(BaseModel):
+    name: str
+    endpoint_url: str
+    cluster_token: str
+    
 class UserCreate(BaseModel):
     email: EmailStr
     password: str

@@ -158,6 +158,35 @@ def add_cluster(
     db.refresh(new_cluster)
     return new_cluster
 
+@app.get("/system/metrics")
+def get_system_metrics(current_user: models.User = Depends(get_current_user)):
+    try:
+        raw_metrics = custom_api.list_cluster_custom_object(
+            group="metrics.k8s.io",
+            version="v1beta1",
+            plural="nodes"
+        )
+        nodes_summary = []
+        for item in raw_metrics.get("items", []):
+            node_name = item["metadata"]["name"]
+            cpu_raw = item["usage"]["cpu"]       
+            mem_raw = item["usage"]["memory"]    
+            mem_numeric = int(mem_raw.replace("Ki", "")) / 1024 if "Ki" in mem_raw else 0
+            
+            nodes_summary.append({
+                "node_name": node_name,
+                "cpu_usage": cpu_raw,
+                "memory_used_mb": round(mem_numeric, 2)
+            })
+        return {
+            "status": "success",
+            "source": "K3s Metrics Server",
+            "nodes_count": len(nodes_summary),
+            "cluster_metrics": nodes_summary
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.get("/clusters/{cluster_id}/metrics")
 def get_dynamic_cluster_metrics(
     cluster_id: int, 

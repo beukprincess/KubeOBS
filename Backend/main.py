@@ -8,10 +8,9 @@ import bcrypt
 from datetime import timedelta,datetime, timezone
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import declarative_base, relationship, Session
-from . import models
-from .database import engine 
+import models
 import schemas
-from database import get_db
+from database import get_db, engine
 
 
 load_dotenv()

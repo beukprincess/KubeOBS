@@ -38,3 +38,13 @@ class SystemMetric(Base):
     memory_utilization = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow, index=True)
     cluster_id = Column(Integer, ForeignKey("clusters.id", ondelete="CASCADE"))
+
+class Cluster(Base):
+    __tablename__ = "clusters"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, unique=True)
+    endpoint_url = Column(String(255), nullable=False)
+    cluster_token = Column(String(1000), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))

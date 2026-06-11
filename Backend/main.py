@@ -18,10 +18,13 @@ ENV_VAR = os.getenv('API_TOKEN')
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
-models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Kubeobs API", version="1.0.1")
 
 Base = declarative_base()
+
+@app.on_event("startup")
+def startup_event():
+    models.Base.metadata.create_all(bind=engine)
 
 def verify_token(x_auth_token: str = Header(None)):
     if not ENV_VAR or x_auth_token != ENV_VAR:

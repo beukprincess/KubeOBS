@@ -8,7 +8,8 @@ import bcrypt
 from datetime import timedelta,datetime, timezone
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import declarative_base, relationship, Session
-import models
+from . import models
+from .database import engine 
 import schemas
 from database import get_db
 
@@ -18,6 +19,8 @@ ENV_VAR = os.getenv('API_TOKEN')
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+models.Base.metadata.create_all(bind=engine)
+app = FastAPI(title="Kubeobs API", version="1.0.1")
 
 Base = declarative_base()
 
@@ -49,7 +52,6 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
         
     return user
 
-app = FastAPI(title="Kubeobs API", version="1.0.1")
 
 
 try:

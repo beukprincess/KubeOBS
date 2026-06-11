@@ -186,6 +186,23 @@ def get_user_clusters(db: Session = Depends(get_db), current_user: models.User =
     clusters = db.query(models.Cluster).filter(models.Cluster.user_id == current_user.id).all()
     return clusters
 
+@app.post("/clusters", response_model=schemas.ClusterResponse, status_code=status.HTTP_201_CREATED)
+def add_cluster(
+    cluster_data: schemas.ClusterCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    new_cluster = models.Cluster(
+        name=cluster_data.name,
+        endpoint_url=cluster_data.endpoint_url,
+        cluster_token=cluster_data.cluster_token,
+        user_id=current_user.id
+    )
+    db.add(new_cluster)
+    db.commit()
+    db.refresh(new_cluster)
+    return new_cluster
+
 @app.get("/pods", dependencies=[Depends(verify_token)])
 def get_pods():
     try:

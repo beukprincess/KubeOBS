@@ -27,10 +27,6 @@ Base = declarative_base()
 def startup_event():
     models.Base.metadata.create_all(bind=engine)
 
-def verify_token(x_auth_token: str = Header(None)):
-    if not ENV_VAR or x_auth_token != ENV_VAR:
-        raise HTTPException(status_code=401, detail="Error: Unauthorized access")
-    return x_auth_token
 
 def get_current_user(token: str = Depends(security), db: Session = Depends(get_db)):
 
@@ -140,34 +136,83 @@ def get_nodes(current_user: models.User = Depends(get_current_user)):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@app.get("/system/metrics")
-def get_system_metrics(current_user: models.User = Depends(get_current_user)):
+@app.get("/clusters", response_model=list[schemas.ClusterResponse])
+def get_user_clusters(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    clusters = db.query(models.Cluster).filter(models.Cluster.user_id == current_user.id).all()
+    return clusters
+
+@app.post("/clusters", response_model=schemas.ClusterResponse, status_code=status.HTTP_201_CREATED)
+def add_cluster(
+    cluster_data: schemas.ClusterCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    new_cluster = models.Cluster(
+        name=cluster_data.name,
+        endpoint_url=cluster_data.endpoint_url,
+        cluster_token=cluster_data.cluster_token,
+        user_id=current_user.id
+    )
+    db.add(new_cluster)
+    db.commit()
+    db.refresh(new_cluster)
+    return new_cluster
+
+@app.get("/clusters/{cluster_id}/metrics")
+def get_dynamic_cluster_metrics(
+    cluster_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    cluster = db.query(models.Cluster).filter(models.Cluster.id == cluster_id).first()
+    if not cluster:
+        raise HTTPException(status_code=404, detail=f"Cluster not found: {cluster_id}")
+        
+    if cluster.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied: This is not your cluster")
+        
     try:
-        raw_metrics = custom_api.list_cluster_custom_object(
+        configuration = client.Configuration()
+        configuration.host = cluster.endpoint_url  
+        configuration.verify_ssl = False 
+        configuration.api_key = {"authorization": f"Bearer {cluster.cluster_token}"}
+        
+        dynamic_client = client.ApiClient(configuration)
+        dynamic_custom_api = client.CustomObjectsApi(dynamic_client)
+        
+        raw_metrics = dynamic_custom_api.list_cluster_custom_object(
             group="metrics.k8s.io",
             version="v1beta1",
             plural="nodes"
         )
+        
         nodes_summary = []
         for item in raw_metrics.get("items", []):
             node_name = item["metadata"]["name"]
             cpu_raw = item["usage"]["cpu"]       
             mem_raw = item["usage"]["memory"]    
+            
+            cpu_cores = int(cpu_raw.replace("n", "")) / 1_000_000_000 if "n" in cpu_raw else 0
             mem_numeric = int(mem_raw.replace("Ki", "")) / 1024 if "Ki" in mem_raw else 0
             
             nodes_summary.append({
                 "node_name": node_name,
-                "cpu_usage": cpu_raw,
+                "cpu_usage_cores": round(cpu_cores, 3),
                 "memory_used_mb": round(mem_numeric, 2)
             })
+            
         return {
             "status": "success",
-            "source": "K3s Metrics Server",
-            "nodes_count": len(nodes_summary),
+            "cluster_id": cluster_id,
+            "cluster_name": cluster.name,
             "cluster_metrics": nodes_summary
         }
+        
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error fetching metrics for cluster {cluster.name}: {str(e)}"
+        )
 
 @app.get("/pods/health")
 def get_pods_health(current_user: models.User = Depends(get_current_user)):

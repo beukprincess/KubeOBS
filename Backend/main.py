@@ -84,7 +84,7 @@ def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
 
     return new_user
-
+##
 @app.post("/auth/login", response_model=schemas.TokenResponse)
 def login_user(user_credentials: schemas.UserLogin, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == user_credentials.email).first()

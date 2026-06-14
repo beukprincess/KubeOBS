@@ -78,364 +78,370 @@ fun EnteringScreen(
     val pxToMove = with(LocalDensity.current) {
         1000.dp.toPx().roundToInt()
     }
-    val offset by animateIntOffsetAsState(
-        targetValue = if (isSignUpDisplays) {
-            IntOffset(0, pxToMove)
-        } else {
-            IntOffset.Zero
-        },
-        animationSpec = tween(durationMillis = slideDur),
-        label = "offset"
-    )
-    val offsetA by animateIntOffsetAsState(
-        targetValue = if (!isSignUpDisplays) {
-            IntOffset(0, pxToMove)
-        } else {
-            IntOffset.Zero
-        },
-        animationSpec = tween(durationMillis = slideDur),
-        label = "offsetA"
-    )
-
-    AnimatedVisibility(
-        visible = !isSignUpDisplays,
-        enter = fadeIn(
-            animationSpec = tween(durationMillis = visibilityDur)
-        ) + expandVertically(
-            animationSpec = tween(durationMillis = visibilityDur)
-        ),
-        exit = fadeOut(
-            animationSpec = tween(durationMillis = visibilityDur)
-        ) + shrinkVertically(
-            animationSpec = tween(durationMillis = visibilityDur)
-        )
+    Column(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.background)
+            .fillMaxSize()
     ) {
-        val email: TextFieldState = rememberTextFieldState()
-        val password: TextFieldState = rememberTextFieldState()
-        val loginViewModel: LoginViewModel = viewModel()
-        val loginState by loginViewModel.loginState.collectAsState()
-        val context = LocalContext.current
+        val offset by animateIntOffsetAsState(
+            targetValue = if (isSignUpDisplays) {
+                IntOffset(0, pxToMove)
+            } else {
+                IntOffset.Zero
+            },
+            animationSpec = tween(durationMillis = slideDur),
+            label = "offset"
+        )
+        val offsetA by animateIntOffsetAsState(
+            targetValue = if (!isSignUpDisplays) {
+                IntOffset(0, pxToMove)
+            } else {
+                IntOffset.Zero
+            },
+            animationSpec = tween(durationMillis = slideDur),
+            label = "offsetA"
+        )
 
-        LaunchedEffect(loginState) {
-            if (loginState is LoginResultState.SuccessResult) {
-                navController.navigate(Routes.ClustersScreen) {
-                    popUpTo(0)
-                }
-            }
-        }
-        Column(
-            modifier = Modifier
-                .offset{
-                    offset
-                }
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            when (val s = loginState) {
-                is LoginResultState.LoadingResult -> {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.height(10.dp))
-                }
-                is LoginResultState.ErrorResult -> {
-                    Text(text = s.e, color = Color.Red, fontFamily = UbuntuFamily().ubuntuFamily)
-                    Spacer(modifier = Modifier.height(10.dp))
-                }
-                else -> {}
-            }
-            Text(
-                text = "Log In",
-                modifier = Modifier
-                    .padding(top=50.dp),
-                fontSize = 42.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontFamily = UbuntuFamily().ubuntuFamily
+        AnimatedVisibility(
+            visible = !isSignUpDisplays,
+            enter = fadeIn(
+                animationSpec = tween(durationMillis = visibilityDur)
+            ) + expandVertically(
+                animationSpec = tween(durationMillis = visibilityDur)
+            ),
+            exit = fadeOut(
+                animationSpec = tween(durationMillis = visibilityDur)
+            ) + shrinkVertically(
+                animationSpec = tween(durationMillis = visibilityDur)
             )
+        ) {
+            val email: TextFieldState = rememberTextFieldState()
+            val password: TextFieldState = rememberTextFieldState()
+            val loginViewModel: LoginViewModel = viewModel()
+            val loginState by loginViewModel.loginState.collectAsState()
+            val context = LocalContext.current
+
+            LaunchedEffect(loginState) {
+                if (loginState is LoginResultState.SuccessResult) {
+                    navController.navigate(Routes.ClustersScreen) {
+                        popUpTo(0)
+                    }
+                }
+            }
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ){
-                OutlinedTextField(
-                    state = email,
-                    lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
-                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
-                    label = {
-                        Text(
-                            text = "Email",
-                            fontFamily = UbuntuFamily().ubuntuFamily
-                        )
-                            },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        disabledBorderColor = MaterialTheme.colorScheme.primary,
-                        errorBorderColor = MaterialTheme.colorScheme.primary,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.primary
-                    ),
-                    shape = RoundedCornerShape(10.dp)
-                )
-                OutlinedTextField(
-                    state = password,
-                    lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
-                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
-                    label = {
-                        Text(
-                            text = "Password",
-                            fontFamily = UbuntuFamily().ubuntuFamily
-                        )
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        disabledBorderColor = MaterialTheme.colorScheme.primary,
-                        errorBorderColor = MaterialTheme.colorScheme.primary,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.primary
-                    ),
-                    shape = RoundedCornerShape(10.dp)
-                )
-                Spacer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(30.dp)
-                )
-                Button(
-                    colors = ButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White,
-                        disabledContainerColor = MaterialTheme.colorScheme.primary,
-                        disabledContentColor = Color.White
-                    ),
-                    modifier = Modifier
-                        .size(
-                            height = 50.dp,
-                            width = 150.dp
-                        ),
-                    onClick = {
-                        loginViewModel.requestForLogin(
-                            context = context,
-                            email = email.text.toString(),
-                            password = password.text.toString()
-                        )
+                    .offset{
+                        offset
                     }
-                ) {
-                    Text(
-                        text = "Log In",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = Color.White,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
-                }
-            }
-            Text(
-                text = "Have no account?",
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Normal,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
-            TextButton(
-                onClick = {isSignUpDisplays=!isSignUpDisplays},
-                modifier = Modifier
-                    .padding(bottom = 30.dp),
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                when (val s = loginState) {
+                    is LoginResultState.LoadingResult -> {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+                    is LoginResultState.ErrorResult -> {
+                        Text(text = s.e, color = Color.Red, fontFamily = UbuntuFamily().ubuntuFamily)
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+                    else -> {}
+                }
                 Text(
-                    text = "Sign up",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Normal,
+                    text = "Log In",
+                    modifier = Modifier
+                        .padding(top=50.dp),
+                    fontSize = 42.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontFamily = UbuntuFamily().ubuntuFamily
                 )
-            }
-        }
-    }
-    AnimatedVisibility(
-        visible = isSignUpDisplays,
-        enter = fadeIn(
-            animationSpec = tween(durationMillis = visibilityDur)
-        ) + expandVertically(
-            animationSpec = tween(durationMillis = visibilityDur)
-        ),
-        exit = fadeOut(
-            animationSpec = tween(durationMillis = visibilityDur)
-        ) + shrinkVertically(
-            animationSpec = tween(durationMillis = visibilityDur)
-        )
-    ) {
-        val email: TextFieldState = rememberTextFieldState()
-        val password: TextFieldState = rememberTextFieldState()
-        val validationPassword: TextFieldState = rememberTextFieldState()
-        var adviceText: String by remember { mutableStateOf("Confirm your password") }
-        val regState by viewModel.regRequest.collectAsState()
-        LaunchedEffect(regState) {
-            if (regState is RegResultState.SuccessResult) {
-                isSignUpDisplays = false
-            }
-        }
-        Column(
-            modifier = Modifier
-                .offset{
-                    offsetA
-                }
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            when (val currentState = regState) {
-                is RegResultState.IdleResult -> { }
-                is RegResultState.LoadingResult -> {
-                    OnRegLoading()
-                }
-                is RegResultState.ErrorResult -> {
-                    Text(
-                        text = currentState.e,
-                        color = Color.Red,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                }
-                is RegResultState.SuccessResult -> { }
-            }
-            Text(
-                text = "Sign Up",
-                modifier = Modifier
-                    .padding(top=50.dp),
-                fontSize = 42.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ){
-                OutlinedTextField(
-                    state = email,
-                    lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
-                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
-                    label = {
-                        Text(
-                            text = "Email",
-                            fontFamily = UbuntuFamily().ubuntuFamily
-                        )
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        disabledBorderColor = MaterialTheme.colorScheme.primary,
-                        errorBorderColor = MaterialTheme.colorScheme.primary,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.primary
-                    ),
-                    shape = RoundedCornerShape(10.dp)
-                )
-                OutlinedTextField(
-                    state = password,
-                    lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
-                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
-                    label = {
-                        Text(
-                            text = "Password",
-                            fontFamily = UbuntuFamily().ubuntuFamily
-                        )
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        disabledBorderColor = MaterialTheme.colorScheme.primary,
-                        errorBorderColor = MaterialTheme.colorScheme.primary,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.primary
-                    ),
-                    shape = RoundedCornerShape(10.dp)
-                )
-                Spacer(
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(5.dp)
-                )
-                Row(
-                    modifier = Modifier.width(OutlinedTextFieldDefaults.MinWidth)
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ){
-                    Text(
-                        text = adviceText,
-                        fontWeight = FontWeight.Normal,
-                        fontFamily = UbuntuFamily().ubuntuFamily,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-                OutlinedTextField(
-                    state = validationPassword,
-                    lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
-                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
-                    label = {
-                        Text(
-                            text = "Rewrite password",
-                            fontFamily = UbuntuFamily().ubuntuFamily
-                        )
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        disabledBorderColor = MaterialTheme.colorScheme.primary,
-                        errorBorderColor = MaterialTheme.colorScheme.primary,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.primary
-                    ),
-                    shape = RoundedCornerShape(10.dp)
-                )
-                Spacer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(30.dp)
-                )
-                Button(
-                    colors = ButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White,
-                        disabledContainerColor = MaterialTheme.colorScheme.primary,
-                        disabledContentColor = Color.White
-                    ),
-                    modifier = Modifier
-                        .size(
-                            height = 50.dp,
-                            width = 150.dp
+                    OutlinedTextField(
+                        state = email,
+                        lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
+                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
+                        label = {
+                            Text(
+                                text = "Email",
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledBorderColor = MaterialTheme.colorScheme.primary,
+                            errorBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.primary
                         ),
-                    onClick = {
-                        val validationMsg = signUpValidation(password.text.toString(), validationPassword.text.toString())
-                        if (validationMsg == "Confirm your password") {
-                            viewModel.requestForReg(
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        state = password,
+                        lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
+                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
+                        label = {
+                            Text(
+                                text = "Password",
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledBorderColor = MaterialTheme.colorScheme.primary,
+                            errorBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(30.dp)
+                    )
+                    Button(
+                        colors = ButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = Color.White,
+                            disabledContainerColor = MaterialTheme.colorScheme.primary,
+                            disabledContentColor = Color.White
+                        ),
+                        modifier = Modifier
+                            .size(
+                                height = 50.dp,
+                                width = 150.dp
+                            ),
+                        onClick = {
+                            loginViewModel.requestForLogin(
+                                context = context,
                                 email = email.text.toString(),
                                 password = password.text.toString()
                             )
-                        } else {
-                            adviceText = validationMsg
                         }
+                    ) {
+                        Text(
+                            text = "Log In",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = Color.White,
+                            fontFamily = UbuntuFamily().ubuntuFamily
+                        )
                     }
+                }
+                Text(
+                    text = "Have no account?",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Normal,
+                    fontFamily = UbuntuFamily().ubuntuFamily
+                )
+                TextButton(
+                    onClick = {isSignUpDisplays=!isSignUpDisplays},
+                    modifier = Modifier
+                        .padding(bottom = 30.dp),
                 ) {
                     Text(
-                        text = "Sign Up",
-                        color = Color.White,
-                        fontSize = 22.sp,
+                        text = "Sign up",
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Normal,
                         fontFamily = UbuntuFamily().ubuntuFamily
                     )
                 }
             }
-            Text(
-                text = "Have an account?",
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Normal,
-                fontFamily = UbuntuFamily().ubuntuFamily
+        }
+        AnimatedVisibility(
+            visible = isSignUpDisplays,
+            enter = fadeIn(
+                animationSpec = tween(durationMillis = visibilityDur)
+            ) + expandVertically(
+                animationSpec = tween(durationMillis = visibilityDur)
+            ),
+            exit = fadeOut(
+                animationSpec = tween(durationMillis = visibilityDur)
+            ) + shrinkVertically(
+                animationSpec = tween(durationMillis = visibilityDur)
             )
-            TextButton(
-                onClick = {isSignUpDisplays=!isSignUpDisplays},
+        ) {
+            val email: TextFieldState = rememberTextFieldState()
+            val password: TextFieldState = rememberTextFieldState()
+            val validationPassword: TextFieldState = rememberTextFieldState()
+            var adviceText: String by remember { mutableStateOf("Confirm your password") }
+            val regState by viewModel.regRequest.collectAsState()
+            LaunchedEffect(regState) {
+                if (regState is RegResultState.SuccessResult) {
+                    isSignUpDisplays = false
+                }
+            }
+            Column(
                 modifier = Modifier
-                    .padding(bottom = 30.dp),
+                    .offset{
+                        offsetA
+                    }
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                when (val currentState = regState) {
+                    is RegResultState.IdleResult -> { }
+                    is RegResultState.LoadingResult -> {
+                        OnRegLoading()
+                    }
+                    is RegResultState.ErrorResult -> {
+                        Text(
+                            text = currentState.e,
+                            color = Color.Red,
+                            fontFamily = UbuntuFamily().ubuntuFamily
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+                    is RegResultState.SuccessResult -> { }
+                }
                 Text(
-                    text = "Log In",
-                    color = MaterialTheme.colorScheme.primary,
+                    text = "Sign Up",
+                    modifier = Modifier
+                        .padding(top=50.dp),
+                    fontSize = 42.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontFamily = UbuntuFamily().ubuntuFamily
+                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ){
+                    OutlinedTextField(
+                        state = email,
+                        lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
+                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
+                        label = {
+                            Text(
+                                text = "Email",
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledBorderColor = MaterialTheme.colorScheme.primary,
+                            errorBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        state = password,
+                        lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
+                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
+                        label = {
+                            Text(
+                                text = "Password",
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledBorderColor = MaterialTheme.colorScheme.primary,
+                            errorBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(5.dp)
+                    )
+                    Row(
+                        modifier = Modifier.width(OutlinedTextFieldDefaults.MinWidth)
+                    ){
+                        Text(
+                            text = adviceText,
+                            fontWeight = FontWeight.Normal,
+                            fontFamily = UbuntuFamily().ubuntuFamily,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                    OutlinedTextField(
+                        state = validationPassword,
+                        lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
+                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold),
+                        label = {
+                            Text(
+                                text = "Rewrite password",
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledBorderColor = MaterialTheme.colorScheme.primary,
+                            errorBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(30.dp)
+                    )
+                    Button(
+                        colors = ButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = Color.White,
+                            disabledContainerColor = MaterialTheme.colorScheme.primary,
+                            disabledContentColor = Color.White
+                        ),
+                        modifier = Modifier
+                            .size(
+                                height = 50.dp,
+                                width = 150.dp
+                            ),
+                        onClick = {
+                            val validationMsg = signUpValidation(password.text.toString(), validationPassword.text.toString())
+                            if (validationMsg == "Confirm your password") {
+                                viewModel.requestForReg(
+                                    email = email.text.toString(),
+                                    password = password.text.toString()
+                                )
+                            } else {
+                                adviceText = validationMsg
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = "Sign Up",
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Normal,
+                            fontFamily = UbuntuFamily().ubuntuFamily
+                        )
+                    }
+                }
+                Text(
+                    text = "Have an account?",
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Normal,
                     fontFamily = UbuntuFamily().ubuntuFamily
                 )
+                TextButton(
+                    onClick = {isSignUpDisplays=!isSignUpDisplays},
+                    modifier = Modifier
+                        .padding(bottom = 30.dp),
+                ) {
+                    Text(
+                        text = "Log In",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = UbuntuFamily().ubuntuFamily
+                    )
+                }
             }
         }
     }

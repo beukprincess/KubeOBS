@@ -1,6 +1,7 @@
 package com.example.kubeobs.clusters
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -45,13 +46,18 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import com.example.kubeobs.consts.Colors
 import com.example.kubeobs.consts.Routes
 import com.example.kubeobs.consts.UbuntuFamily
+import com.example.kubeobs.data.AddClusterRequest
+import com.example.kubeobs.data.AddClusterState
+import com.example.kubeobs.data.Metrics
 import com.example.kubeobs.data.MetricsDataState
 import com.example.kubeobs.data.MetricsResponse
 import com.example.kubeobs.data.MetricsUIState
 import com.example.kubeobs.data.RetrofitAPI
+import com.example.kubeobs.data.TokenDataStore
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
@@ -81,56 +87,32 @@ import java.io.IOException
 @Composable
 fun MetricsScreen(
     navController: NavController,
+    clusterId: Int,
     viewModel: MetricsInitViewModel = viewModel()
 ){
+    val context = LocalContext.current
     var displayDialog = remember {mutableStateOf(false)}
     val state by viewModel.uiState.collectAsState()
     val metricsState by viewModel.metricsState.collectAsState()
-    DisposableEffect(Unit) {
-        viewModel.startPolling()
-        onDispose {
-            viewModel.stopPolling()
-        }
+    LaunchedEffect(Unit) {
+        viewModel.fetchData(context)
     }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title= {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.Center
                     ){
                         Text(
-                            text = "KubeOBS",
+                            text = "Cluster metrics",
                             fontSize = 42.sp,
                             fontWeight=FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground,
                             fontFamily = UbuntuFamily().ubuntuFamily
                         )
-                        Button(
-                            colors = ButtonColors(
-                                containerColor = Color(Colors.kubeColor),
-                                contentColor = Color.White,
-                                disabledContainerColor = Color(Colors.kubeColor),
-                                disabledContentColor = Color.White
-                            ),
-                            modifier = Modifier
-                                .padding(end=20.dp, bottom=20.dp)
-                                .size(
-                                    height = 40.dp,
-                                    width = 100.dp
-                                ),
-                            onClick = {
-                                navController.navigate(Routes.MainScreen)
-                            }
-                        ) {
-                            Text(
-                                text = "Nodes",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = UbuntuFamily().ubuntuFamily
-                            )
-                        }
                     }
                 }
             )
@@ -153,17 +135,17 @@ fun MetricsScreen(
                                 disabledContentColor = Color.White
                             ),
                             modifier = Modifier
-                                .padding(end=20.dp, bottom=20.dp)
-                                .size(
-                                    height = 40.dp,
-                                    width = 150.dp
-                                ),
-                            onClick = {}
+                                .fillMaxWidth()
+                                .padding(horizontal=20.dp)
+                                .height(50.dp),
+                            onClick = {
+                                navController.navigate(Routes.MainScreen)
+                            }
                         ) {
                             Text(
-                                text = "Add cluster",
+                                text = "Nodes",
                                 fontSize = 18.sp,
-                                fontWeight = FontWeight.Normal,
+                                fontWeight = FontWeight.Bold,
                                 fontFamily = UbuntuFamily().ubuntuFamily
                             )
                         }
@@ -211,6 +193,7 @@ fun OnLoadingMetrics(){
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun MetricsCard(data: MetricsResponse?){
+    val cpuUsage = (data?.clusterMetrics?.firstOrNull()?.cpuUsage?.removeSuffix("n")?.toDoubleOrNull() ?: 0.0)/1_000_000_000.0 * 100
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -218,6 +201,46 @@ fun MetricsCard(data: MetricsResponse?){
             .padding(top = 20.dp)
             .background(MaterialTheme.colorScheme.background),
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ){
+            Text(
+                text = data?.source.toString(),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+        }
+        Spacer(
+            modifier = Modifier
+                .height(15.dp)
+                .fillMaxWidth()
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ){
+            Text(
+                text = "Quantity of nodes:",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+            Text(
+                text = data?.nodesCount.toString(),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = UbuntuFamily().ubuntuFamily
+            )
+        }
+        Spacer(
+            modifier = Modifier
+                .height(15.dp)
+                .fillMaxWidth()
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth(),
@@ -230,7 +253,7 @@ fun MetricsCard(data: MetricsResponse?){
                 fontFamily = UbuntuFamily().ubuntuFamily
             )
             Text(
-                text = data?.metrics?.cpuPercentage.toString(),
+                text = cpuUsage.toString(),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Normal,
                 fontFamily = UbuntuFamily().ubuntuFamily
@@ -238,160 +261,37 @@ fun MetricsCard(data: MetricsResponse?){
         }
         Spacer(
             modifier = Modifier
-                .height(10.dp)
+                .height(15.dp)
                 .fillMaxWidth()
         )
         MetricLiveChart(
-            title = "CPU usage (%)",
-            currentMetric = data?.metrics?.cpuPercentage?.toDouble(),
+            title = "(%)",
+            currentMetric = cpuUsage,
             updateTrigger = data
         )
-        Text(
-            text = "RAM usage: ",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = UbuntuFamily().ubuntuFamily
-        )
-        Row(
-            modifier = Modifier
-                .padding(start=10.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ){
-            Text(
-                text = "total volume: ",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Normal,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
-            Text(
-                text = data?.metrics?.ram?.totalGB.toString(),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Normal,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
-        }
-        Row(
-            modifier = Modifier
-                .padding(start=10.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ){
-            Text(
-                text = "used volume: ",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Normal,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
-            Text(
-                text = data?.metrics?.ram?.usedGB.toString(),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Normal,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
-        }
-        Row(
-            modifier = Modifier
-                .padding(start=10.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ){
-            Text(
-                text = "percentage: ",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Normal,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
-            Text(
-                text = data?.metrics?.ram?.percentage.toString(),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Normal,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
-        }
         Spacer(
             modifier = Modifier
-                .height(10.dp)
+                .height(15.dp)
                 .fillMaxWidth()
         )
-        MetricLiveChart(
-            title = "RAM usage (%)",
-            currentMetric = data?.metrics?.ram?.percentage?.toDouble(),
-            updateTrigger = data
-        )
-        Text(
-            text = "Disk usage:",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = UbuntuFamily().ubuntuFamily
-        )
         Row(
             modifier = Modifier
-                .padding(start=10.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ){
             Text(
-                text = "total volume: ",
+                text = "RAM usage:",
                 fontSize = 24.sp,
-                fontWeight = FontWeight.Normal,
+                fontWeight = FontWeight.Bold,
                 fontFamily = UbuntuFamily().ubuntuFamily
             )
             Text(
-                text = data?.metrics?.disk?.totalGB.toString(),
+                text = "${data?.clusterMetrics?.firstOrNull()?.memoryUsedMb?.toString()} Mb",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Normal,
                 fontFamily = UbuntuFamily().ubuntuFamily
             )
         }
-        Row(
-            modifier = Modifier
-                .padding(start=10.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ){
-            Text(
-                text = "free volume: ",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Normal,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
-            Text(
-                text = data?.metrics?.disk?.freeGB.toString(),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Normal,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
-        }
-        Row(
-            modifier = Modifier
-                .padding(start=10.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ){
-            Text(
-                text = "percentage: ",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Normal,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
-            Text(
-                text = data?.metrics?.disk?.percentage.toString(),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Normal,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
-        }
-        Spacer(
-            modifier = Modifier
-                .height(10.dp)
-                .fillMaxWidth()
-        )
-        MetricLiveChart(
-            title = "Disk usage (%)",
-            currentMetric = data?.metrics?.disk?.percentage?.toDouble(),
-            updateTrigger = data
-        )
     }
 }
 
@@ -552,17 +452,13 @@ class MetricsInitViewModel: ViewModel(){
     val metricsState: StateFlow<MetricsDataState> = _metricsState.asStateFlow()
     private var pollingJob: Job? = null
 
-    init {
-        fetchData()
-    }
-
-    fun startPolling() {
+    fun startPolling(context: Context) {
+        Log.d("POLLING", "startPolling called, job active: ${pollingJob?.isActive}")
         if (pollingJob?.isActive == true) return
-
         pollingJob = viewModelScope.launch {
             while (isActive) {
-                updateData()
-                delay(500)
+                updateData(context)
+                delay(1000)
             }
         }
     }
@@ -571,15 +467,27 @@ class MetricsInitViewModel: ViewModel(){
         pollingJob?.cancel()
     }
 
-    private suspend fun updateData() {
+    private suspend fun updateData(context: Context) {
+        Log.d("POLLING", "updateData called at ${System.currentTimeMillis()}")
         try {
-            val metricsResponse = RetrofitAPI.instance.getMetrics()
-
-            if (metricsResponse.isSuccessful) {
-                val responseData = metricsResponse.body()
+            Log.d("REQ","Making request...")
+            val token = TokenDataStore.getToken(context)
+            if (token == null) {
+                _metricsState.value = MetricsDataState.ErrorMetricsData("Not authorized")
+            }
+            val response = RetrofitAPI.instance.getMetrics("Bearer $token")
+            if (response.isSuccessful && response.body()!=null) {
+                val responseData = response.body()
+                Log.d("POLLING", "Setting metricsState: ${response.body()}")
                 _metricsState.value = MetricsDataState.SuccessMetricsData(responseData)
             } else {
-                _metricsState.value = MetricsDataState.ErrorMetricsData("Error: ${metricsResponse.code()}")
+                val errorMsg = when (response.code()) {
+                    400 -> "Invalid cluster data"
+                    401 -> "Session expired, please log in again"
+                    409 -> "Cluster with this name already exists"
+                    else -> "Error: ${response.code()}"
+                }
+                _metricsState.value = MetricsDataState.ErrorMetricsData("Error: ${response.code()}")
             }
         } catch (e: HttpException) {
             _metricsState.value = MetricsDataState.ErrorMetricsData("Net err: ${e.message}")
@@ -588,24 +496,33 @@ class MetricsInitViewModel: ViewModel(){
         }
     }
 
-    fun fetchData() {
+    fun fetchData(context: Context) {
         viewModelScope.launch {
             _uiState.value = MetricsUIState.LoadingMetrics
             try {
                 Log.i("KubeOBS_Network", "Making request...")
-                val metricsResponse = RetrofitAPI.instance.getMetrics()
-
-                if (metricsResponse.isSuccessful) {
-                    val responseData = metricsResponse.body()
-
-                    Log.d("KubeOBS_Network", "Success, Code: ${metricsResponse.code()}")
-                    Log.d("KubeOBS_Network", "Resp body: $responseData")
-
-                    _uiState.value = MetricsUIState.SuccessMetrics(responseData)
-                    startPolling()
+                val token = TokenDataStore.getToken(context)
+                if (token == null) {
+                    _uiState.value = MetricsUIState.ErrorMetrics("Not authorized")
+                    return@launch
+                }
+                val response = RetrofitAPI.instance.getMetrics(
+                    token = "Bearer $token",
+                )
+                Log.d("ADD_CLUSTER", "Code: ${response.code()}")
+                Log.d("ADD_CLUSTER", "Error body: ${response.errorBody()?.string()}")
+                if (response.isSuccessful && response.body() != null) {
+                    _uiState.value = MetricsUIState.SuccessMetrics(response.body()!!)
+                    delay(500)
+                    startPolling(context)
                 } else {
-                    Log.e("KubeOBS_Network", "Server err: ${metricsResponse.errorBody()?.string()}")
-                    _uiState.value = MetricsUIState.ErrorMetrics("Error: ${metricsResponse.code()}")
+                    val errorMsg = when (response.code()) {
+                        400 -> "Invalid cluster data"
+                        401 -> "Session expired, please log in again"
+                        409 -> "Cluster with this name already exists"
+                        else -> "Error: ${response.code()}"
+                    }
+                    _uiState.value = MetricsUIState.ErrorMetrics(errorMsg)
                 }
             } catch (e: HttpException) {
                 _uiState.value = MetricsUIState.ErrorMetrics("Net err: ${e.message}")

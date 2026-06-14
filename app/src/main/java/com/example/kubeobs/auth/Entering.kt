@@ -1,5 +1,6 @@
 package com.example.kubeobs.auth
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateIntOffsetAsState
@@ -42,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -52,19 +54,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import kotlinx.coroutines.runBlocking
+import com.example.kubeobs.data.TokenDataStore
 import kotlin.math.roundToInt
-import com.example.kubeobs.consts.Colors
 import com.example.kubeobs.consts.Routes
 import com.example.kubeobs.consts.UbuntuFamily
+import com.example.kubeobs.data.LoginRequest
+import com.example.kubeobs.data.LoginResultState
 import com.example.kubeobs.data.RegResultState
 import com.example.kubeobs.data.RegisterRequest
 import com.example.kubeobs.data.RetrofitAPI
-import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlin.jvm.java
 
 @Composable
 fun EnteringScreen(
@@ -95,6 +96,7 @@ fun EnteringScreen(
         animationSpec = tween(durationMillis = slideDur),
         label = "offsetA"
     )
+
     AnimatedVisibility(
         visible = !isSignUpDisplays,
         enter = fadeIn(
@@ -110,6 +112,17 @@ fun EnteringScreen(
     ) {
         val email: TextFieldState = rememberTextFieldState()
         val password: TextFieldState = rememberTextFieldState()
+        val loginViewModel: LoginViewModel = viewModel()
+        val loginState by loginViewModel.loginState.collectAsState()
+        val context = LocalContext.current
+
+        LaunchedEffect(loginState) {
+            if (loginState is LoginResultState.SuccessResult) {
+                navController.navigate(Routes.ClustersScreen) {
+                    popUpTo(0)
+                }
+            }
+        }
         Column(
             modifier = Modifier
                 .offset{
@@ -119,6 +132,17 @@ fun EnteringScreen(
                 .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            when (val s = loginState) {
+                is LoginResultState.LoadingResult -> {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+                is LoginResultState.ErrorResult -> {
+                    Text(text = s.e, color = Color.Red, fontFamily = UbuntuFamily().ubuntuFamily)
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+                else -> {}
+            }
             Text(
                 text = "Log In",
                 modifier = Modifier
@@ -189,7 +213,11 @@ fun EnteringScreen(
                             width = 150.dp
                         ),
                     onClick = {
-                        navController.navigate(Routes.MetricsScreen)
+                        loginViewModel.requestForLogin(
+                            context = context,
+                            email = email.text.toString(),
+                            password = password.text.toString()
+                        )
                     }
                 ) {
                     Text(
@@ -241,9 +269,7 @@ fun EnteringScreen(
         val regState by viewModel.regRequest.collectAsState()
         LaunchedEffect(regState) {
             if (regState is RegResultState.SuccessResult) {
-                navController.navigate(Routes.MetricsScreen) {
-                    popUpTo(0)
-                }
+                isSignUpDisplays = false
             }
         }
         Column(
@@ -446,30 +472,75 @@ fun signUpValidation(pass: String, valPass: String): String {
     }
 }
 
-class RegisterViewModel: ViewModel(){
+class RegisterViewModel : ViewModel() {
     private val _regRequest = MutableStateFlow<RegResultState>(RegResultState.IdleResult)
     val regRequest: StateFlow<RegResultState> = _regRequest
-    fun requestForReg(email: String, password: String){
+
+    fun requestForReg(email: String, password: String) {
         viewModelScope.launch {
-            try{
+            try {
                 _regRequest.value = RegResultState.LoadingResult
-                val request = RegisterRequest(email, password)
-                val response = RetrofitAPI.instance.registerUser(request)
-                if(response.isSuccessful){
+                val response = RetrofitAPI.instance.registerUser(RegisterRequest(email, password))
+                Log.d("REGISTER", "Code: ${response.code()}")
+                Log.d("REGISTER", "Headers: ${response.headers()}")
+                Log.d("REGISTER", "Error body: ${response.errorBody()?.string()}")
+                Log.d("REGISTER", "Body: ${response.body()}")
+                if (response.isSuccessful) {
                     _regRequest.value = RegResultState.SuccessResult(response.body())
-                    Log.d("Success", "User with id: ${response.body()?.id} was registered!")
-                } else{
-                    _regRequest.value = RegResultState.ErrorResult("Error code: ${response.code()}")
-                    Log.e("ERROR", "Error code: ${response.code()}")
+                    Log.d("REGISTER", "Success: ${response.body()?.email}")
+                } else {
+                    val errorMsg = when (response.code()) {
+                        400 -> "Email has been already used"
+                        else -> "Error: ${response.code()}"
+                    }
+                    _regRequest.value = RegResultState.ErrorResult(errorMsg)
                 }
-            } catch(e: Error) {
-                Log.e("NET", "Network error: $e")
+            } catch (e: Exception) {
+                Log.e("REGISTER", "Exception type: ${e::class.java.simpleName}")
+                Log.e("REGISTER", "Message: ${e.message}")
+                Log.e("REGISTER", "Cause: ${e.cause}")
+                _regRequest.value = RegResultState.ErrorResult("Network error: ${e.message}")
             }
         }
     }
 }
 
+class LoginViewModel : ViewModel() {
+    private val _loginState = MutableStateFlow<LoginResultState>(LoginResultState.IdleResult)
+    val loginState: StateFlow<LoginResultState> = _loginState
 
+    fun requestForLogin(context: Context, email: String, password: String) {
+        viewModelScope.launch {
+            try {
+                _loginState.value = LoginResultState.LoadingResult
+                val response = RetrofitAPI.instance.loginUser(LoginRequest(email, password))
+                Log.d("LOGIN", "Code: ${response.code()}")
+                Log.d("LOGIN", "Error body: ${response.errorBody()?.string()}")
+                Log.d("LOGIN", "Body: ${response.body()}")
+                if (response.isSuccessful) {
+                    val token = response.body()?.accessToken
+                    if (token != null) {
+                        TokenDataStore.saveToken(context, token)
+                        _loginState.value = LoginResultState.SuccessResult(token)
+                        Log.d("LOGIN", "Token saved!")
+                    } else {
+                        _loginState.value = LoginResultState.ErrorResult("Token is empty")
+                    }
+                } else {
+                    val errorMsg = when (response.code()) {
+                        401 -> "Wrong email or password"
+                        else -> "Error: ${response.code()}"
+                    }
+                    _loginState.value = LoginResultState.ErrorResult(errorMsg)
+                }
+            } catch (e: Exception) {
+                Log.e("LOGIN", "Exception: ${e::class.java.simpleName}")
+                Log.e("LOGIN", "Message: ${e.message}")
+                _loginState.value = LoginResultState.ErrorResult("Network error: ${e.message}")
+            }
+        }
+    }
+}
 
 
 

@@ -31,9 +31,28 @@ sealed interface MetricsDataState{
     data class SuccessMetricsData(val data: MetricsResponse?): MetricsDataState
     data class ErrorMetricsData(val e: String): MetricsDataState
 }
-sealed interface RegResultState{
-    object IdleResult: RegResultState
-    object LoadingResult: RegResultState
-    data class SuccessResult(val data: UserResponse?): RegResultState
-    data class ErrorResult(val e: String): RegResultState
+sealed interface RegResultState {
+    object IdleResult : RegResultState
+    object LoadingResult : RegResultState
+    data class SuccessResult(val data: RegisterResponse?) : RegResultState
+    data class ErrorResult(val e: String) : RegResultState
+}
+sealed interface LoginResultState {
+    object IdleResult : LoginResultState
+    object LoadingResult : LoginResultState
+    data class SuccessResult(val token: String) : LoginResultState
+    data class ErrorResult(val e: String) : LoginResultState
+}
+sealed class ClustersState {
+    object IdleResult : ClustersState()
+    object LoadingResult : ClustersState()
+    data class SuccessResult(val clusters: List<ClusterResponse>) : ClustersState()
+    data class ErrorResult(val e: String) : ClustersState()
+}
+
+sealed class AddClusterState {
+    object IdleResult : AddClusterState()
+    object LoadingResult : AddClusterState()
+    data class SuccessResult(val cluster: ClusterResponse) : AddClusterState()
+    data class ErrorResult(val e: String) : AddClusterState()
 }

@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
@@ -51,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,8 +67,10 @@ import com.example.kubeobs.data.AddClusterRequest
 import com.example.kubeobs.data.AddClusterState
 import com.example.kubeobs.data.ClusterResponse
 import com.example.kubeobs.data.ClustersState
+import com.example.kubeobs.data.LogOutState
 import com.example.kubeobs.data.RetrofitAPI
 import com.example.kubeobs.data.TokenDataStore
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -80,6 +84,7 @@ fun ClustersScreen(
     val context = LocalContext.current
     val clustersState by viewModel.clustersState.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    val logOutState by viewModel.LOState.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.loadClusters(context)
@@ -117,10 +122,22 @@ fun ClustersScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary
+                onClick = { viewModel.logOut(context, navController) },
+                containerColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .size(
+                        height = 50.dp,
+                        width = 120.dp
+                    )
+                    .padding(end=5.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add cluster", tint = Color.White)
+                Text(
+                    text = "Log out",
+                    fontFamily = UbuntuFamily().ubuntuFamily,
+                    fontSize = 20.sp,
+                    fontWeight=FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
             }
         }
     ) { padding ->
@@ -182,6 +199,19 @@ fun ClustersScreen(
                                 )
                             }
                         }
+                    }
+                    FloatingActionButton(
+                        onClick = { showAddDialog = true },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .padding(top=8.dp)
+                    ) {
+                        Icon(Icons.Default.Add,
+                            contentDescription = "Add cluster",
+                            tint = Color.White,
+                        )
                     }
                 }
             }
@@ -376,13 +406,37 @@ fun AddClusterDialog(
 }
 
 class ClustersViewModel : ViewModel() {
-
+    private val _LOState = MutableStateFlow<LogOutState>(LogOutState.IdleLogOut)
+    val LOState: StateFlow<LogOutState> = _LOState
     private val _clustersState = MutableStateFlow<ClustersState>(ClustersState.IdleResult)
     val clustersState: StateFlow<ClustersState> = _clustersState
 
     private val _addState = MutableStateFlow<AddClusterState>(AddClusterState.IdleResult)
     val addState: StateFlow<AddClusterState> = _addState
 
+    fun logOut(context: Context, navController: NavController){
+        viewModelScope.launch{
+            _LOState.value = LogOutState.LoadingLogOut
+            val token = TokenDataStore.getToken(context)
+            Log.d("LOGOUT", "Token first try: $token")
+            TokenDataStore.clearToken(context)
+            if(token==null){
+                Log.d("LOGOUT", "Token second try: $token")
+                _LOState.value = LogOutState.SuccessLogOut
+                navController.navigate(Routes.EnteringScreen)
+            }
+            else{
+                TokenDataStore.clearToken(context)
+                TokenDataStore.clearToken(context)
+                TokenDataStore.clearToken(context)
+                TokenDataStore.clearToken(context)
+                TokenDataStore.clearToken(context)
+                TokenDataStore.clearToken(context)
+                TokenDataStore.clearToken(context)
+                Log.d("LOGOUT", "Token second try: $token")
+            }
+        }
+    }
     fun loadClusters(context: Context) {
         viewModelScope.launch {
             try {

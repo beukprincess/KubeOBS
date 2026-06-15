@@ -73,6 +73,9 @@ fun EnteringScreen(
     viewModel: RegisterViewModel = viewModel()
 ){
     var isSignUpDisplays by remember { mutableStateOf(false) }
+    var potentialError by remember { mutableStateOf("Log in") }
+    var potentialColor by remember { mutableStateOf(Color.White) }
+    var potentialFontSize by remember { mutableStateOf(42.sp) }
     val slideDur: Int = 500
     val visibilityDur: Int = 1000
     val pxToMove = with(LocalDensity.current) {
@@ -139,22 +142,23 @@ fun EnteringScreen(
             ) {
                 when (val s = loginState) {
                     is LoginResultState.LoadingResult -> {
+                        Spacer(modifier = Modifier.height(5.dp))
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.height(10.dp))
                     }
                     is LoginResultState.ErrorResult -> {
-                        Text(text = s.e, color = Color.Red, fontFamily = UbuntuFamily().ubuntuFamily)
-                        Spacer(modifier = Modifier.height(10.dp))
+                        potentialError = s.e
+                        potentialColor = Color.Red
+                        potentialFontSize = 30.sp
                     }
                     else -> {}
                 }
                 Text(
-                    text = "Log In",
+                    text = potentialError,
                     modifier = Modifier
                         .padding(top=50.dp),
-                    fontSize = 42.sp,
+                    fontSize = potentialFontSize,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
+                    color = potentialColor,
                     fontFamily = UbuntuFamily().ubuntuFamily
                 )
                 Column(

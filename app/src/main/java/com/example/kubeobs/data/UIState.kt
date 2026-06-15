@@ -43,16 +43,20 @@ sealed interface LoginResultState {
     data class SuccessResult(val token: String) : LoginResultState
     data class ErrorResult(val e: String) : LoginResultState
 }
-sealed class ClustersState {
-    object IdleResult : ClustersState()
-    object LoadingResult : ClustersState()
-    data class SuccessResult(val clusters: List<ClusterResponse>) : ClustersState()
-    data class ErrorResult(val e: String) : ClustersState()
+sealed interface ClustersState {
+    object IdleResult : ClustersState
+    object LoadingResult : ClustersState
+    data class SuccessResult(val clusters: List<ClusterResponse>) : ClustersState
+    data class ErrorResult(val e: String) : ClustersState
 }
-
-sealed class AddClusterState {
-    object IdleResult : AddClusterState()
-    object LoadingResult : AddClusterState()
-    data class SuccessResult(val cluster: ClusterResponse) : AddClusterState()
-    data class ErrorResult(val e: String) : AddClusterState()
+sealed interface AddClusterState {
+    object IdleResult : AddClusterState
+    object LoadingResult : AddClusterState
+    data class SuccessResult(val cluster: ClusterResponse) : AddClusterState
+    data class ErrorResult(val e: String) : AddClusterState
+}
+sealed interface LogOutState {
+    object IdleLogOut : LogOutState
+    object LoadingLogOut : LogOutState
+    object SuccessLogOut : LogOutState
 }

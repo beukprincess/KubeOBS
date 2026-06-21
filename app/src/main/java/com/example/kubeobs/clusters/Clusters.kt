@@ -415,25 +415,12 @@ class ClustersViewModel : ViewModel() {
     val addState: StateFlow<AddClusterState> = _addState
 
     fun logOut(context: Context, navController: NavController){
-        viewModelScope.launch{
+        viewModelScope.launch {
             _LOState.value = LogOutState.LoadingLogOut
-            val token = TokenDataStore.getToken(context)
-            Log.d("LOGOUT", "Token first try: $token")
             TokenDataStore.clearToken(context)
-            if(token==null){
-                Log.d("LOGOUT", "Token second try: $token")
-                _LOState.value = LogOutState.SuccessLogOut
-                navController.navigate(Routes.EnteringScreen)
-            }
-            else{
-                TokenDataStore.clearToken(context)
-                TokenDataStore.clearToken(context)
-                TokenDataStore.clearToken(context)
-                TokenDataStore.clearToken(context)
-                TokenDataStore.clearToken(context)
-                TokenDataStore.clearToken(context)
-                TokenDataStore.clearToken(context)
-                Log.d("LOGOUT", "Token second try: $token")
+            _LOState.value = LogOutState.SuccessLogOut
+            navController.navigate(Routes.EnteringScreen) {
+                popUpTo(0) { inclusive = true }
             }
         }
     }

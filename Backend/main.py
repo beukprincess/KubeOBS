@@ -1,6 +1,6 @@
 from kubernetes import client, config
 import os
-from fastapi import FastAPI, Depends, Request, Header, HTTPException, status
+from fastapi import FastAPI, Depends, Request, Header, HTTPException, status, WebSocket, WebSocketDisconnect, Query
 from fastapi.security import HTTPBearer
 from dotenv import load_dotenv
 import jwt

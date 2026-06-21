@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 #
 class ClusterCreate(BaseModel):
@@ -8,7 +8,7 @@ class ClusterCreate(BaseModel):
     
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=8, max_length=128, pattern=r'(?=.*[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?])',description="Password must contain at least one special character and contain more than 8 characters.")
 
 class UserResponse(BaseModel):
     id: int

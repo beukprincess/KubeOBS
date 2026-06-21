@@ -1,5 +1,6 @@
 fastapi
 uvicorn
+websockets>=12.0
 kubernetes
 python-dotenv
 psutil==5.9.8

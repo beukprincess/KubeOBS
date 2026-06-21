@@ -12,7 +12,7 @@ from sqlalchemy.orm import declarative_base, relationship, Session
 import models
 import schemas
 from database import get_db, engine
-
+import asyncio
 
 load_dotenv()
 JWT_SECRET = os.getenv("JWT_SECRET")

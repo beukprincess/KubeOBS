@@ -187,61 +187,69 @@ def get_system_metrics(current_user: models.User = Depends(get_current_user)):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@app.get("/clusters/{cluster_id}/metrics")
-def get_dynamic_cluster_metrics(
+@app.websocket("/ws/metrics/{cluster_id}")
+async def websocket_metrics(
+    websocket: WebSocket, 
     cluster_id: int, 
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    token: str = Query(...), 
+    db: Session = Depends(get_db)
 ):
-    cluster = db.query(models.Cluster).filter(models.Cluster.id == cluster_id).first()
-    if not cluster:
-        raise HTTPException(status_code=404, detail=f"Cluster not found: {cluster_id}")
-        
-    if cluster.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied: This is not your cluster")
-        
     try:
-        configuration = client.Configuration()
-        configuration.host = cluster.endpoint_url  
-        configuration.verify_ssl = False 
-        configuration.api_key = {"authorization": f"Bearer {cluster.cluster_token}"}
-        
-        dynamic_client = client.ApiClient(configuration)
-        dynamic_custom_api = client.CustomObjectsApi(dynamic_client)
-        
-        raw_metrics = dynamic_custom_api.list_cluster_custom_object(
-            group="metrics.k8s.io",
-            version="v1beta1",
-            plural="nodes"
-        )
-        
-        nodes_summary = []
-        for item in raw_metrics.get("items", []):
-            node_name = item["metadata"]["name"]
-            cpu_raw = item["usage"]["cpu"]       
-            mem_raw = item["usage"]["memory"]    
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            await websocket.close(code=1008)
+            return
+    except Exception:
+        await websocket.close(code=1008)
+        return
+
+    await websocket.accept()
+
+    cluster = db.query(Cluster).filter(Cluster.id == cluster_id, Cluster.user_id == user_id).first()
+    
+    if not cluster:
+        await websocket.send_json({"error": "Cluster not found or access denied"})
+        await websocket.close()
+        return
+
+    configuration = client.Configuration()
+    configuration.host = cluster.endpoint_url
+    configuration.api_key['authorization'] = f"Bearer {cluster.cluster_token}"
+    configuration.verify_ssl = False 
+
+    api_client = client.ApiClient(configuration)
+    v1 = client.CoreV1Api(api_client)
+
+    try:
+        while True:
+            pods = v1.list_pod_for_all_namespaces()
             
-            cpu_cores = int(cpu_raw.replace("n", "")) / 1_000_000_000 if "n" in cpu_raw else 0
-            mem_numeric = int(mem_raw.replace("Ki", "")) / 1024 if "Ki" in mem_raw else 0
+            pods_data = []
+            for pod in pods.items:
+                restarts = sum(c.restart_count for c in pod.status.container_statuses) if pod.status.container_statuses else 0
+                
+                pods_data.append({
+                    "name": pod.metadata.name,
+                    "namespace": pod.metadata.namespace,
+                    "status": pod.status.phase,
+                    "restarts": restarts
+                })
             
-            nodes_summary.append({
-                "node_name": node_name,
-                "cpu_usage_cores": round(cpu_cores, 3),
-                "memory_used_mb": round(mem_numeric, 2)
+            await websocket.send_json({
+                "cluster_id": cluster.id,
+                "cluster_name": cluster.name,
+                "total_pods": len(pods_data),
+                "pods": pods_data
             })
             
-        return {
-            "status": "success",
-            "cluster_id": cluster_id,
-            "cluster_name": cluster.name,
-            "cluster_metrics": nodes_summary
-        }
-        
+            await asyncio.sleep(3)
+
+    except WebSocketDisconnect:
+        pass
     except Exception as e:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Error fetching metrics for cluster {cluster.name}: {str(e)}"
-        )
+        await websocket.send_json({"error": f"Connection error: {str(e)}"})
+        await websocket.close()
 
 @app.get("/pods/health")
 def get_pods_health(current_user: models.User = Depends(get_current_user)):

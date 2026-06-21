@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -47,6 +48,7 @@ import com.example.kubeobs.data.NodesResponse
 import com.example.kubeobs.data.NodesUIState
 import com.example.kubeobs.data.RetrofitAPI
 import com.example.kubeobs.data.TokenDataStore
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -96,7 +98,7 @@ fun MainScreen(
                     OnLoading()
                 }
                 is NodesUIState.SuccessNodes ->{
-                    OnSuccess(currentState.data, navController)
+                    OnSuccess(currentState.data, navController, context, viewModel)
                 }
                 is NodesUIState.ErrorNodes ->{
                     displayDialog.value = true
@@ -122,59 +124,66 @@ fun OnLoading(){
 }
 
 @Composable
-fun OnSuccess(_podsList: NodesResponse?, navController: NavController) {
-    val nodesList = _podsList?.nodes ?: emptyList()
+fun OnSuccess(
+    _podsList: NodesResponse?,
+    navController: NavController,
+    context: Context,
+    viewModel: MainViewModel
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
+) {
+    val nodesList = _podsList?.nodes ?: emptyList()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.startRefreshing(context) },
+        modifier = Modifier.fillMaxSize()
     ) {
-        if (nodesList.isEmpty()) {
-            Text(
-                text = "The list is empty",
-                modifier = Modifier.padding(20.dp),
-                fontSize = 18.sp,
-                fontFamily = UbuntuFamily().ubuntuFamily
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(nodesList) { nodeItem ->
-                    Card(
-                        modifier = Modifier
-                            .height(100.dp)
-                            .fillMaxWidth(),
-                        onClick = {
-                            navController.navigate(Routes.PodScreen)
-                        },
-                        shape = RoundedCornerShape(15.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(Colors.kubeColor),
-                            contentColor = Color.White,
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxSize()
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            if (nodesList.isEmpty()) {
+                Text(
+                    text = "The list is empty",
+                    modifier = Modifier.padding(20.dp),
+                    fontSize = 18.sp,
+                    fontFamily = UbuntuFamily().ubuntuFamily
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(nodesList) { nodeItem ->
+                        Card(
+                            modifier = Modifier
+                                .height(100.dp)
+                                .fillMaxWidth(),
+                            onClick = { navController.navigate(Routes.PodScreen) },
+                            shape = RoundedCornerShape(15.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(Colors.kubeColor),
+                                contentColor = Color.White,
+                            )
                         ) {
-                            Column(
-                                modifier = Modifier.padding(start = 10.dp, top = 10.dp)
-                            ) {
-                                Text(
-                                    text = "Node:",
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = UbuntuFamily().ubuntuFamily
-                                )
-                                Text(
-                                    text = nodeItem.toString(),
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Normal,
-                                    fontFamily = UbuntuFamily().ubuntuFamily
-                                )
+                            Row(modifier = Modifier.fillMaxSize()) {
+                                Column(modifier = Modifier.padding(start = 10.dp, top = 10.dp)) {
+                                    Text(
+                                        text = "Node:",
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = UbuntuFamily().ubuntuFamily
+                                    )
+                                    Text(
+                                        text = nodeItem.toString(),
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.Normal,
+                                        fontFamily = UbuntuFamily().ubuntuFamily
+                                    )
+                                }
                             }
                         }
                     }
@@ -220,33 +229,49 @@ class MainViewModel: ViewModel(){
     private val _uiState = MutableStateFlow<NodesUIState>(NodesUIState.LoadingNodes)
     val uiState: StateFlow<NodesUIState> = _uiState.asStateFlow()
 
-    fun fetchData(context: Context) {
-        viewModelScope.launch {
-            _uiState.value = NodesUIState.LoadingNodes
-            try{
-                Log.i("KubeOBS_Network", "Making request...")
-                val token = TokenDataStore.getToken(context)
-                if(token==null){
-                    _uiState.value = NodesUIState.ErrorNodes("Not authorized")
-                }
-                val response = RetrofitAPI.instance.getNodes("Bearer $token")
-                if (response.isSuccessful && response.body()!=null) {
-                    val responseData = response.body()
-                    Log.d("KubeOBS_Network", "Success, Code: ${response.code()}")
-                    Log.d("KubeOBS_Network", "Resp body: $responseData")
-                    Log.d("KubeOBS_Network", "Node body: ${responseData?.nodes}")
-                    Log.d("KubeOBS_Network", "Nodes quantity: ${responseData?.nodes?.size}")
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
-                    _uiState.value = NodesUIState.SuccessNodes(responseData)
-                } else {
-                    Log.e("KubeOBS_Network", "Server err: ${response.errorBody()?.string()}")
-                    _uiState.value = NodesUIState.ErrorNodes("Error: ${response.code()}")
-                }
-            } catch (e: HttpException) {
-                _uiState.value = NodesUIState.ErrorNodes("Net err: ${e.message}")
-            } catch (e: IOException) {
-                _uiState.value = NodesUIState.ErrorNodes("Con err: ${e.message}")
+    private var refreshingJob: Job? = null
+
+    fun startRefreshing(context: Context) {
+        if (refreshingJob?.isActive == true) return
+        refreshingJob = viewModelScope.launch { fetchDataInternal(context, isRefresh = true) }
+    }
+
+    fun fetchData(context: Context) {
+        viewModelScope.launch { fetchDataInternal(context, isRefresh = false) }
+    }
+
+    private suspend fun fetchDataInternal(context: Context, isRefresh: Boolean) {
+        if (isRefresh) {
+            _isRefreshing.value = true
+        } else {
+            _uiState.value = NodesUIState.LoadingNodes
+        }
+        try {
+            Log.i("KubeOBS_Network", "Making request...")
+            val token = TokenDataStore.getToken(context)
+            if (token == null) {
+                _uiState.value = NodesUIState.ErrorNodes("Not authorized")
+                return
             }
+            val response = RetrofitAPI.instance.getNodes("Bearer $token")
+            if (response.isSuccessful && response.body() != null) {
+                val responseData = response.body()
+                Log.d("KubeOBS_Network", "Success, Code: ${response.code()}")
+                Log.d("KubeOBS_Network", "Nodes quantity: ${responseData?.nodes?.size}")
+                _uiState.value = NodesUIState.SuccessNodes(responseData)
+            } else {
+                Log.e("KubeOBS_Network", "Server err: ${response.errorBody()?.string()}")
+                _uiState.value = NodesUIState.ErrorNodes("Error: ${response.code()}")
+            }
+        } catch (e: HttpException) {
+            _uiState.value = NodesUIState.ErrorNodes("Net err: ${e.message}")
+        } catch (e: IOException) {
+            _uiState.value = NodesUIState.ErrorNodes("Con err: ${e.message}")
+        } finally {
+            if (isRefresh) _isRefreshing.value = false
         }
     }
 }

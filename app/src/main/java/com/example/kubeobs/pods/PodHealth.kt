@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -22,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -47,6 +50,7 @@ import com.example.kubeobs.consts.Colors
 import com.example.kubeobs.consts.UbuntuFamily
 import com.example.kubeobs.data.PodHealthUIState
 import com.example.kubeobs.data.PodsInfoResponse
+import com.example.kubeobs.data.PodsRefState
 import com.example.kubeobs.data.RetrofitAPI
 import com.example.kubeobs.data.TokenDataStore
 import kotlinx.coroutines.Job
@@ -102,7 +106,7 @@ fun PodHealthScreen(
                     OnPodHealthLoading()
                 }
                 is PodHealthUIState.SuccessPodHealth ->{
-                    OnPodHealthSuccess(currentState.data, podIndex)
+                    OnPodHealthSuccess(currentState.data, podIndex, context, state)
                 }
                 is PodHealthUIState.ErrorPodHealth ->{
                     displayDialog.value = true
@@ -131,16 +135,22 @@ fun OnPodHealthLoading(){
 fun OnPodHealthSuccess(
     _podsInfo: PodsInfoResponse?,
     podIndex: Int,
+    context: Context,
+    state: PodHealthUIState,
     viewModel: PodHealthViewModel = viewModel()
 ) {
     val podsList = _podsInfo?.pods ?: emptyList()
+
     val currentPod = podsList[podIndex].toString().slice(podsList[podIndex].toString().indexOf("name")..podsList[podIndex].toString().length-2)
     val currentPodName = currentPod.slice(currentPod.indexOf("name")+5..currentPod.indexOf("namespace")-3)
     val currentPodNamespace = currentPod.slice(currentPod.indexOf("namespace")+10..currentPod.indexOf("status")-3)
     val currentPodStatus = currentPod.slice(currentPod.indexOf("status")+7..currentPod.indexOf("restarts")-3)
     val currentPodRestarts = currentPod.slice(currentPod.indexOf("restarts")+9..currentPod.indexOf("ageSeconds")-3).toInt()
     var podAgeSeconds by remember { mutableIntStateOf(currentPod.slice(currentPod.indexOf("ageSeconds")+11..<currentPod.length).toInt()) }
+
     val ageSeconds by viewModel.ageSeconds.collectAsState()
+
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     DisposableEffect(Unit) {
         if(currentPodStatus=="Running"){
             viewModel.startPolling(podAgeSeconds)
@@ -162,117 +172,129 @@ fun OnPodHealthSuccess(
                 fontFamily = UbuntuFamily().ubuntuFamily
             )
         } else{
-            Card(
-                modifier = Modifier
-                    .height(300.dp)
-                    .fillMaxWidth(),
-                shape = RoundedCornerShape(15.dp),
-                border = BorderStroke(2.dp, Color(Colors.kubeColor)),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                )
-            ){
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {viewModel.startRefreshing(context)},
+                modifier = Modifier.fillMaxSize()
+            ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(start = 10.dp, top = 10.dp)
+                        .verticalScroll(rememberScrollState())
+                        .fillMaxSize(),
                 ) {
-                    Text(
-                        text = "Name:",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
-                    Text(
-                        text = currentPodName,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Normal,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
-                    Spacer(
+                    Card(
                         modifier = Modifier
-                            .height(10.dp)
-                            .fillMaxWidth()
-                    )
-                    Text(
-                        text = "Namespace: ",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
-                    Text(
-                        text = currentPodNamespace,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Normal,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
-                    Spacer(
-                        modifier = Modifier
-                            .height(10.dp)
-                            .fillMaxWidth()
-                    )
-                    Text(
-                        text = "Status: ",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
-                    if (currentPodStatus=="Running"){
-                        Text(
-                            color = Color.Green,
-                            text = currentPodStatus,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Normal,
-                            fontFamily = UbuntuFamily().ubuntuFamily
+                            .height(300.dp)
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(15.dp),
+                        border = BorderStroke(2.dp, Color(Colors.kubeColor)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.background,
                         )
-                    } else {
-                        Text(
-                            color = Color.Red,
-                            text = currentPodStatus,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Normal,
-                            fontFamily = UbuntuFamily().ubuntuFamily
-                        )
+                    ){
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(start = 10.dp, top = 10.dp)
+                        ) {
+                            Text(
+                                text = "Name:",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                            Text(
+                                text = currentPodName,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Normal,
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                            Spacer(
+                                modifier = Modifier
+                                    .height(10.dp)
+                                    .fillMaxWidth()
+                            )
+                            Text(
+                                text = "Namespace: ",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                            Text(
+                                text = currentPodNamespace,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Normal,
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                            Spacer(
+                                modifier = Modifier
+                                    .height(10.dp)
+                                    .fillMaxWidth()
+                            )
+                            Text(
+                                text = "Status: ",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                            if (currentPodStatus=="Running"){
+                                Text(
+                                    color = Color.Green,
+                                    text = currentPodStatus,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    fontFamily = UbuntuFamily().ubuntuFamily
+                                )
+                            } else {
+                                Text(
+                                    color = Color.Red,
+                                    text = currentPodStatus,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    fontFamily = UbuntuFamily().ubuntuFamily
+                                )
+                            }
+                            Spacer(
+                                modifier = Modifier
+                                    .height(10.dp)
+                                    .fillMaxWidth()
+                            )
+                            Text(
+                                text = "Restarts: ",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                            Text(
+                                text = currentPodRestarts.toString(),
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Normal,
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                            Spacer(
+                                modifier = Modifier
+                                    .height(10.dp)
+                                    .fillMaxWidth()
+                            )
+                            Text(
+                                text = "Age(seconds): ",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                            Text(
+                                text = ageSeconds.toString(),
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Normal,
+                                fontFamily = UbuntuFamily().ubuntuFamily
+                            )
+                            Spacer(
+                                modifier = Modifier
+                                    .height(10.dp)
+                                    .fillMaxWidth()
+                            )
+                        }
                     }
-                    Spacer(
-                        modifier = Modifier
-                            .height(10.dp)
-                            .fillMaxWidth()
-                    )
-                    Text(
-                        text = "Restarts: ",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
-                    Text(
-                        text = currentPodRestarts.toString(),
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Normal,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
-                    Spacer(
-                        modifier = Modifier
-                            .height(10.dp)
-                            .fillMaxWidth()
-                    )
-                    Text(
-                        text = "Age(seconds): ",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
-                    Text(
-                        text = ageSeconds.toString(),
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Normal,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
-                    Spacer(
-                        modifier = Modifier
-                            .height(10.dp)
-                            .fillMaxWidth()
-                    )
                 }
             }
         }
@@ -314,9 +336,15 @@ fun OnPodHealthError(errorMessage: String, _displayDialog: MutableState<Boolean>
 class PodHealthViewModel: ViewModel(){
     private val _ageSeconds = MutableStateFlow(0)
     val ageSeconds: StateFlow<Int> = _ageSeconds.asStateFlow()
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     private val _uiState = MutableStateFlow<PodHealthUIState>(PodHealthUIState.LoadingPodHealth)
     val uiState: StateFlow<PodHealthUIState> = _uiState.asStateFlow()
+
     private var pollingJob: Job? = null
+    private var refreshingJob: Job? = null
 
     fun startPolling(initialAge: Int){
         if(pollingJob?.isActive == true) return
@@ -332,32 +360,40 @@ class PodHealthViewModel: ViewModel(){
         pollingJob?.cancel()
     }
 
-    fun fetchData(context: Context) {
-        viewModelScope.launch {
+    fun startRefreshing(context: Context){
+        if(refreshingJob?.isActive == true) return
+        refreshingJob = viewModelScope.launch { fetchData(context, isRefresh = true) }
+    }
+
+    fun fetchData(context: Context, isRefresh: Boolean = false) {
+        viewModelScope.launch { fetchDataInternal(context, isRefresh) }
+    }
+
+    private suspend fun fetchDataInternal(context: Context, isRefresh: Boolean) {
+        if (isRefresh) {
+            _isRefreshing.value = true
+        } else {
             _uiState.value = PodHealthUIState.LoadingPodHealth
-            try {
-                Log.i("KubeOBS_Network", "Making request...")
-                val token = TokenDataStore.getToken(context)
-                if(token==null){
-                    _uiState.value = PodHealthUIState.ErrorPodHealth("Not authorized")
-                }
-                val podsInfoResponse = RetrofitAPI.instance.getPodsInfo("Bearer $token")
-                if (podsInfoResponse.isSuccessful && podsInfoResponse.body()!=null) {
-                    val responseData = podsInfoResponse.body()
-
-                    Log.d("KubeOBS_Network", "Success, Code: ${podsInfoResponse.code()}")
-                    Log.d("KubeOBS_Network", "Resp body: $responseData")
-
-                    _uiState.value = PodHealthUIState.SuccessPodHealth(responseData)
-                } else {
-                    Log.e("KubeOBS_Network", "Server err: ${podsInfoResponse.errorBody()?.string()}")
-                    _uiState.value = PodHealthUIState.ErrorPodHealth("Error: ${podsInfoResponse.code()}")
-                }
-            } catch (e: HttpException) {
-                _uiState.value = PodHealthUIState.ErrorPodHealth("Net err: ${e.message}")
-            } catch (e: IOException) {
-                _uiState.value = PodHealthUIState.ErrorPodHealth("Con err: ${e.message}")
+        }
+        try {
+            val token = TokenDataStore.getToken(context)
+            if (token == null) {
+                _uiState.value = PodHealthUIState.ErrorPodHealth("Not authorized")
+                return
             }
+            val podsInfoResponse = RetrofitAPI.instance.getPodsInfo("Bearer $token")
+            if (podsInfoResponse.isSuccessful && podsInfoResponse.body() != null) {
+                _uiState.value = PodHealthUIState.SuccessPodHealth(podsInfoResponse.body())
+            } else {
+                Log.e("KubeOBS_Network", "Server err: ${podsInfoResponse.errorBody()?.string()}")
+                _uiState.value = PodHealthUIState.ErrorPodHealth("Error: ${podsInfoResponse.code()}")
+            }
+        } catch (e: HttpException) {
+            _uiState.value = PodHealthUIState.ErrorPodHealth("Net err: ${e.message}")
+        } catch (e: IOException) {
+            _uiState.value = PodHealthUIState.ErrorPodHealth("Con err: ${e.message}")
+        } finally {
+            if (isRefresh) _isRefreshing.value = false
         }
     }
 }

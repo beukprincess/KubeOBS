@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-
+import re
 #
 class ClusterCreate(BaseModel):
     name: str
@@ -8,7 +8,13 @@ class ClusterCreate(BaseModel):
     
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=8, max_length=128, pattern=r'(?=.*[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?])',description="Password must contain at least one special character and contain more than 8 characters.")
+    password: str = Field(..., min_length=8, max_length=128, description="Password must contain at least one special character and contain more than 8 characters.")
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        if not re.search(r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]', value):
+            raise ValueError("Password must contain at least one special character")
+        return value
 
 class UserResponse(BaseModel):
     id: int

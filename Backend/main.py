@@ -196,17 +196,19 @@ async def websocket_metrics(
 ):
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user_id = payload.get("sub")
+        user_id = payload.get("user_id")
         if user_id is None:
+            print("Error: user_id not found in token payload")
             await websocket.close(code=1008)
             return
-    except Exception:
+    except Exception as e:
+        print(f"Error decoding JWT: {e}")
         await websocket.close(code=1008)
         return
 
     await websocket.accept()
 
-    cluster = db.query(Cluster).filter(Cluster.id == cluster_id, Cluster.user_id == user_id).first()
+    cluster = db.query(models.Cluster).filter(models.Cluster.id == cluster_id, models.Cluster.user_id == user_id).first()
     
     if not cluster:
         await websocket.send_json({"error": "Cluster not found or access denied"})
@@ -219,11 +221,11 @@ async def websocket_metrics(
     configuration.verify_ssl = False 
 
     api_client = client.ApiClient(configuration)
-    v1 = client.CoreV1Api(api_client)
+    k8s_client = client.CoreV1Api(api_client) 
 
     try:
         while True:
-            pods = v1.list_pod_for_all_namespaces()
+            pods = k8s_client.list_pod_for_all_namespaces()
             
             pods_data = []
             for pod in pods.items:

@@ -12,7 +12,7 @@ from sqlalchemy.orm import declarative_base, relationship, Session
 import models
 import schemas
 from database import get_db, engine
-
+import asyncio
 
 load_dotenv()
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -196,18 +196,19 @@ async def websocket_metrics(
 ):
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user_id = payload.get("sub")
+        user_id = payload.get("user_id")
+        exp = payload.get("exp")
         if user_id is None:
             await websocket.close(code=1008)
             return
-    except Exception:
+    except Exception as e:
+        print(f"Помилка розшифровки JWT: {e}")
         await websocket.close(code=1008)
         return
 
     await websocket.accept()
 
-    cluster = db.query(Cluster).filter(Cluster.id == cluster_id, Cluster.user_id == user_id).first()
-    
+    cluster = db.query(models.Cluster).filter(models.Cluster.id == cluster_id, models.Cluster.user_id == user_id).first()
     if not cluster:
         await websocket.send_json({"error": "Cluster not found or access denied"})
         await websocket.close()
@@ -219,27 +220,94 @@ async def websocket_metrics(
     configuration.verify_ssl = False 
 
     api_client = client.ApiClient(configuration)
-    v1 = client.CoreV1Api(api_client)
+    k8s_client = client.CoreV1Api(api_client) 
+    metrics_client = client.CustomObjectsApi(api_client)
 
     try:
         while True:
-            pods = v1.list_pod_for_all_namespaces()
+
+            if exp and datetime.now(timezone.utc).timestamp() > exp:
+                await websocket.send_json({
+                    "error": "Time expired. Please re-login.", 
+                    "type": "auth_expired"
+                })
+                await websocket.close(code=1008)
+                break
+
+            alerts = []
             
+            pod_metrics_map = {}
+            try:
+                raw_pod_metrics = metrics_client.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "pods")
+                for item in raw_pod_metrics.get("items", []):
+                    p_name = item["metadata"]["name"]
+                    p_ns = item["metadata"]["namespace"]
+                    
+                    total_mem_ki = 0
+                    raw_cpu = "0"
+                    if item.get("containers"):
+                        raw_cpu = item["containers"][0]["usage"]["cpu"]
+                        for c in item["containers"]:
+                            mem_str = c["usage"]["memory"]
+                            total_mem_ki += int(mem_str.replace("Ki", "")) if "Ki" in mem_str else 0
+                            
+                    pod_metrics_map[f"{p_ns}/{p_name}"] = {
+                        "memory_mb": round(total_mem_ki / 1024, 2),
+                        "cpu_raw": raw_cpu
+                    }
+            except Exception as e:
+                print(f"Metrics (pods) error: {e}")
+            
+            pods = k8s_client.list_pod_for_all_namespaces()
             pods_data = []
+            
             for pod in pods.items:
                 restarts = sum(c.restart_count for c in pod.status.container_statuses) if pod.status.container_statuses else 0
+                status_phase = pod.status.phase
                 
+                if restarts >= 5:
+                    alerts.append({
+                        "level": "warning", 
+                        "message": f"Warning. Pod {pod.metadata.name} was restarted {restarts} times!"
+                    })
+                if status_phase in ["Failed", "CrashLoopBackOff", "Unknown"]:
+                    alerts.append({
+                        "level": "critical", 
+                        "message": f"Critical error: Pod {pod.metadata.name} is in {status_phase} state!"
+                    })
+
+                metrics_key = f"{pod.metadata.namespace}/{pod.metadata.name}"
+                pod_res = pod_metrics_map.get(metrics_key, {"memory_mb": 0, "cpu_raw": "0"})
+
                 pods_data.append({
                     "name": pod.metadata.name,
                     "namespace": pod.metadata.namespace,
-                    "status": pod.status.phase,
-                    "restarts": restarts
+                    "status": status_phase,
+                    "restarts": restarts,
+                    "memory_mb": pod_res["memory_mb"],
+                    "cpu_raw": pod_res["cpu_raw"]
                 })
             
+            nodes_usage = []
+            try:
+                raw_node_metrics = metrics_client.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes")
+                for item in raw_node_metrics.get("items", []):
+                    mem_raw = item["usage"]["memory"]
+                    mem_mb = round(int(mem_raw.replace("Ki", "")) / 1024, 2) if "Ki" in mem_raw else 0
+                    nodes_usage.append({
+                        "node_name": item["metadata"]["name"],
+                        "cpu_usage": item["usage"]["cpu"],
+                        "memory_used_mb": mem_mb
+                    })
+            except Exception:
+                pass
+
             await websocket.send_json({
                 "cluster_id": cluster.id,
                 "cluster_name": cluster.name,
                 "total_pods": len(pods_data),
+                "nodes_usage": nodes_usage,
+                "alerts": alerts,
                 "pods": pods_data
             })
             

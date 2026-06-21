@@ -37,4 +37,4 @@ jobs:
       with:
         to: ${{ secrets.TELEGRAM_CHAT_ID }}
         token: ${{ secrets.TELEGRAM_TOKEN }}
-        message: "API updated!"
+        message: "Успішний деплой KubeOBS API!\nВерсія комміту: ${{ github.sha }}\nГілка: ${{ github.ref_name }}"

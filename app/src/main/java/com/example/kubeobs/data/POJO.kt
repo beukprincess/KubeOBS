@@ -26,39 +26,58 @@ data class PodHealth(
 )
 data class MetricsResponse(
     val status: String,
-    val metrics: Metrics
+    val source: String,
+    @SerializedName("nodes_count")
+    val nodesCount: Int,
+    @SerializedName("cluster_metrics")
+    val clusterMetrics: List<Metrics>
 )
 data class Metrics(
-    @SerializedName("cpu_percentage")
-    val cpuPercentage: Float,
-    val ram: Ram,
-    val disk: Disk
-)
-data class Ram(
-    @SerializedName("total_gb")
-    val totalGB: Float,
-    @SerializedName("used_gb")
-    val usedGB: Float,
-    val percentage: Float
-)
-data class Disk(
-    @SerializedName("total_gb")
-    val totalGB: Float,
-    @SerializedName("free_gb")
-    val freeGB: Float,
-    val percentage: Float
+    @SerializedName("node_name")
+    val nodeName: String,
+    @SerializedName("cpu_usage")
+    val cpuUsage: String,
+    @SerializedName("memory_used_mb")
+    val memoryUsedMb: Double,
 )
 data class RegisterRequest(
     val email: String,
     val password: String
 )
-data class UserResponse(
+data class RegisterResponse(
     val id: Int,
     val email: String,
     @SerializedName("is_active")
     val isActive: Boolean
 )
-
+data class UserInfo(
+    val id: Int,
+    val email: String
+)
+data class LoginRequest(
+    val email: String,
+    val password: String
+)
+data class LoginResponse(
+    @SerializedName("access_token") val accessToken: String,
+    @SerializedName("token_type") val tokenType: String,
+    val user: UserInfo
+)
+data class AddClusterRequest(
+    val name: String,
+    @SerializedName("endpoint_url")
+    val endpointUrl: String,
+    @SerializedName("cluster_token")
+    val clusterToken: String
+)
+data class ClusterResponse(
+    val id: Int,
+    val name: String,
+    @SerializedName("endpoint_url")
+    val endpointUrl: String,
+    @SerializedName("user_id")
+    val userId: Int
+)
 
 
 

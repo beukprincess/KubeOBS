@@ -1,6 +1,7 @@
 package com.example.kubeobs.pods
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +30,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,6 +54,7 @@ import com.example.kubeobs.data.PodsRefState
 import com.example.kubeobs.data.PodsResponse
 import com.example.kubeobs.data.PodsUIState
 import com.example.kubeobs.data.RetrofitAPI
+import com.example.kubeobs.data.TokenDataStore
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -67,17 +71,26 @@ fun PodScreen(
 ){
     var displayDialog = remember {mutableStateOf(false)}
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    LaunchedEffect(Unit){
+        viewModel.fetchData(context)
+    }
     Scaffold(
         topBar = {
             TopAppBar(
                 title= {
-                    Text(
-                        text = "Your pods",
-                        fontSize = 42.sp,
-                        fontWeight=FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ){
+                        Text(
+                            text = "All pods",
+                            fontSize = 42.sp,
+                            fontWeight=FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontFamily = UbuntuFamily().ubuntuFamily
+                        )
+                    }
                 }
             )
         },
@@ -91,28 +104,7 @@ fun PodScreen(
                             .fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
                     ) {
-                        Button(
-                            colors = ButtonColors(
-                                containerColor = Color(Colors.kubeColor),
-                                contentColor = Color.White,
-                                disabledContainerColor = Color(Colors.kubeColor),
-                                disabledContentColor = Color.White
-                            ),
-                            modifier = Modifier
-                                .padding(end = 20.dp, bottom = 20.dp)
-                                .size(
-                                    height = 40.dp,
-                                    width = 150.dp
-                                ),
-                            onClick = {}
-                        ) {
-                            Text(
-                                text = "Add cluster",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Normal,
-                                fontFamily = UbuntuFamily().ubuntuFamily
-                            )
-                        }
+
                     }
                 }
             )
@@ -128,7 +120,7 @@ fun PodScreen(
                     OnPodsLoading()
                 }
                 is PodsUIState.SuccessPods ->{
-                    OnPodsSuccess(currentState.data, navController)
+                    OnPodsSuccess(currentState.data, navController, context)
                 }
                 is PodsUIState.ErrorPods ->{
                     displayDialog.value = true
@@ -158,6 +150,7 @@ fun OnPodsLoading(){
 fun OnPodsSuccess(
     _podsList: PodsResponse?,
     navController: NavController,
+    context: Context,
     viewModel: PodViewModel = viewModel()
 ) {
     val podsList = _podsList?.pods ?: emptyList()
@@ -177,7 +170,7 @@ fun OnPodsSuccess(
         } else {
             PullToRefreshBox(
                 isRefreshing = isRefing,
-                onRefresh = { viewModel.startRefreshing() }
+                onRefresh = { viewModel.startRefreshing(context) }
             ) {
                 LazyColumn(
                     modifier = Modifier
@@ -266,18 +259,22 @@ class PodViewModel: ViewModel(){
     val uiState: StateFlow<PodsUIState> = _uiState.asStateFlow()
     private var refreshingJob: Job? = null
 
-    fun startRefreshing(){
+    fun startRefreshing(context: Context){
         if(refreshingJob?.isActive == true) return
         refreshingJob = viewModelScope.launch {
-            refreshData()
+            refreshData(context)
         }
     }
 
-    private suspend fun refreshData(){
+    private suspend fun refreshData(context: Context){
         _refState.value = PodsRefState.LoadingPodsRef
         try{
-            val refResponse = RetrofitAPI.instance.getPods()
-            if (refResponse.isSuccessful){
+            val token = TokenDataStore.getToken(context)
+            if(token == null){
+                _refState.value = PodsRefState.ErrorPodsRef("Not authorized")
+            }
+            val refResponse = RetrofitAPI.instance.getPods("Bearer $token")
+            if (refResponse.isSuccessful && refResponse.body()!=null){
                 val responseData = refResponse.body()
                 _uiState.value = PodsUIState.SuccessPods(responseData)
                 _refState.value = PodsRefState.SuccessPodsRef(responseData)
@@ -285,33 +282,33 @@ class PodViewModel: ViewModel(){
                 _refState.value = PodsRefState.ErrorPodsRef("Error code: ${refResponse.code()}")
             }
         } catch(e: Exception) {
-            Log.e("ERROR","Network error")
+            Log.e("ERROR","Network error $e")
         }
     }
 
-    init {
-        fetchData()
-    }
 
-    fun fetchData() {
+    fun fetchData(context: Context) {
         viewModelScope.launch {
             _uiState.value = PodsUIState.LoadingPods
             try {
                 Log.i("KubeOBS_Network", "Making request...")
-                val podsResponse = RetrofitAPI.instance.getPods()
+                val token = TokenDataStore.getToken(context)
+                if(token == null){
+                    _uiState.value = PodsUIState.ErrorPods("Not authorized")
+                }
+                val response = RetrofitAPI.instance.getPods("Bearer $token")
+                if (response.isSuccessful && response.body()!=null) {
+                    val responseData = response.body()
 
-                if (podsResponse.isSuccessful) {
-                    val responseData = podsResponse.body()
-
-                    Log.d("KubeOBS_Network", "Success, Code: ${podsResponse.code()}")
+                    Log.d("KubeOBS_Network", "Success, Code: ${response.code()}")
                     Log.d("KubeOBS_Network", "Resp body: $responseData")
                     Log.d("KubeOBS_Network", "Pod body: ${responseData?.pods}")
                     Log.d("KubeOBS_Network", "Pods quantity: ${responseData?.pods?.size}")
 
                     _uiState.value = PodsUIState.SuccessPods(responseData)
                 } else {
-                    Log.e("KubeOBS_Network", "Server err: ${podsResponse.errorBody()?.string()}")
-                    _uiState.value = PodsUIState.ErrorPods("Error: ${podsResponse.code()}")
+                    Log.e("KubeOBS_Network", "Server err: ${response.errorBody()?.string()}")
+                    _uiState.value = PodsUIState.ErrorPods("Error: ${response.code()}")
                 }
             } catch (e: HttpException) {
                 _uiState.value = PodsUIState.ErrorPods("Net err: ${e.message}")

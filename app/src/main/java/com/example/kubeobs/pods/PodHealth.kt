@@ -1,9 +1,11 @@
 package com.example.kubeobs.pods
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +24,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -32,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,6 +48,7 @@ import com.example.kubeobs.consts.UbuntuFamily
 import com.example.kubeobs.data.PodHealthUIState
 import com.example.kubeobs.data.PodsInfoResponse
 import com.example.kubeobs.data.RetrofitAPI
+import com.example.kubeobs.data.TokenDataStore
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,17 +68,26 @@ fun PodHealthScreen(
 ){
     var displayDialog = remember {mutableStateOf(false)}
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    LaunchedEffect(Unit){
+        viewModel.fetchData(context)
+    }
     Scaffold(
         topBar = {
             TopAppBar(
                 title= {
-                    Text(
-                        text = "Pod health",
-                        fontSize = 42.sp,
-                        fontWeight=FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ){
+                        Text(
+                            text = "Pod health",
+                            fontSize = 42.sp,
+                            fontWeight=FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontFamily = UbuntuFamily().ubuntuFamily
+                        )
+                    }
                 }
             )
         },
@@ -128,7 +142,9 @@ fun OnPodHealthSuccess(
     var podAgeSeconds by remember { mutableIntStateOf(currentPod.slice(currentPod.indexOf("ageSeconds")+11..<currentPod.length).toInt()) }
     val ageSeconds by viewModel.ageSeconds.collectAsState()
     DisposableEffect(Unit) {
-        viewModel.startPolling(podAgeSeconds)
+        if(currentPodStatus=="Running"){
+            viewModel.startPolling(podAgeSeconds)
+        }
         onDispose {
             viewModel.stopPolling()
         }
@@ -312,23 +328,21 @@ class PodHealthViewModel: ViewModel(){
             }
         }
     }
-
     fun stopPolling(){
         pollingJob?.cancel()
     }
 
-    init {
-        fetchData()
-    }
-
-    fun fetchData() {
+    fun fetchData(context: Context) {
         viewModelScope.launch {
             _uiState.value = PodHealthUIState.LoadingPodHealth
             try {
                 Log.i("KubeOBS_Network", "Making request...")
-                val podsInfoResponse = RetrofitAPI.instance.getPodsInfo()
-
-                if (podsInfoResponse.isSuccessful) {
+                val token = TokenDataStore.getToken(context)
+                if(token==null){
+                    _uiState.value = PodHealthUIState.ErrorPodHealth("Not authorized")
+                }
+                val podsInfoResponse = RetrofitAPI.instance.getPodsInfo("Bearer $token")
+                if (podsInfoResponse.isSuccessful && podsInfoResponse.body()!=null) {
                     val responseData = podsInfoResponse.body()
 
                     Log.d("KubeOBS_Network", "Success, Code: ${podsInfoResponse.code()}")

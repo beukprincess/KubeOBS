@@ -1,5 +1,6 @@
 package com.example.kubeobs.nodes
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,11 +32,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -44,6 +46,7 @@ import com.example.kubeobs.consts.UbuntuFamily
 import com.example.kubeobs.data.NodesResponse
 import com.example.kubeobs.data.NodesUIState
 import com.example.kubeobs.data.RetrofitAPI
+import com.example.kubeobs.data.TokenDataStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,17 +62,26 @@ fun MainScreen(
 ){
     var displayDialog = remember {mutableStateOf(false)}
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    LaunchedEffect(Unit){
+        viewModel.fetchData(context)
+    }
     Scaffold(
         topBar = {
             TopAppBar(
                 title= {
-                    Text(
-                        text = "KubeOBS",
-                        fontSize = 42.sp,
-                        fontWeight=FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontFamily = UbuntuFamily().ubuntuFamily
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ){
+                        Text(
+                            text = "Nodes",
+                            fontSize = 42.sp,
+                            fontWeight=FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontFamily = UbuntuFamily().ubuntuFamily
+                        )
+                    }
                 }
             )
         }
@@ -208,28 +220,27 @@ class MainViewModel: ViewModel(){
     private val _uiState = MutableStateFlow<NodesUIState>(NodesUIState.LoadingNodes)
     val uiState: StateFlow<NodesUIState> = _uiState.asStateFlow()
 
-    init {
-        fetchData()
-    }
-
-    fun fetchData() {
+    fun fetchData(context: Context) {
         viewModelScope.launch {
             _uiState.value = NodesUIState.LoadingNodes
             try{
                 Log.i("KubeOBS_Network", "Making request...")
-                val nodesResponse = RetrofitAPI.instance.getNodes()
-
-                if (nodesResponse.isSuccessful) {
-                    val responseData = nodesResponse.body()
-                    Log.d("KubeOBS_Network", "Success, Code: ${nodesResponse.code()}")
+                val token = TokenDataStore.getToken(context)
+                if(token==null){
+                    _uiState.value = NodesUIState.ErrorNodes("Not authorized")
+                }
+                val response = RetrofitAPI.instance.getNodes("Bearer $token")
+                if (response.isSuccessful && response.body()!=null) {
+                    val responseData = response.body()
+                    Log.d("KubeOBS_Network", "Success, Code: ${response.code()}")
                     Log.d("KubeOBS_Network", "Resp body: $responseData")
                     Log.d("KubeOBS_Network", "Node body: ${responseData?.nodes}")
                     Log.d("KubeOBS_Network", "Nodes quantity: ${responseData?.nodes?.size}")
 
                     _uiState.value = NodesUIState.SuccessNodes(responseData)
                 } else {
-                    Log.e("KubeOBS_Network", "Server err: ${nodesResponse.errorBody()?.string()}")
-                    _uiState.value = NodesUIState.ErrorNodes("Error: ${nodesResponse.code()}")
+                    Log.e("KubeOBS_Network", "Server err: ${response.errorBody()?.string()}")
+                    _uiState.value = NodesUIState.ErrorNodes("Error: ${response.code()}")
                 }
             } catch (e: HttpException) {
                 _uiState.value = NodesUIState.ErrorNodes("Net err: ${e.message}")

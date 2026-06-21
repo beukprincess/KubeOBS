@@ -65,6 +65,8 @@ dependencies {
     implementation("co.yml:ycharts:2.1.0")
     implementation("com.patrykandpatrick.vico:compose:2.0.1")
     implementation("com.patrykandpatrick.vico:compose-m3:2.0.1")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.compose.material:material-icons-extended:<version>")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

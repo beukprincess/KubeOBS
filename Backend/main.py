@@ -13,6 +13,9 @@ import models
 import schemas
 from database import get_db, engine
 import asyncio
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 load_dotenv()
 JWT_SECRET = os.getenv("JWT_SECRET")

@@ -1,0 +1,40 @@
+name: Deploy Backend API
+
+on:
+  push:
+    branches: [ develop, main ]
+    paths:
+      - 'Backend/**'
+
+jobs:
+  deploy-backend:
+    runs-on: [self-hosted, k3s-runner]    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run Unit Tests
+      run: |
+        cd Backend
+        python3 -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
+        python3 -m pytest test_main.py
+    
+    - name: Build and Import Image to K3s
+      run: |
+        IMAGE_TAG="k3s-api-server:${{ github.sha }}"
+        docker build -t $IMAGE_TAG ./Backend
+        docker save $IMAGE_TAG | sudo k3s ctr -n k8s.io images import -
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+    - name: Update K3s Deployment
+      run: |
+        sudo k3s kubectl set image deployment/python-api-deployment api-container=k3s-api-server:${{ github.sha }} -n kubeobs
+        sudo k3s kubectl rollout status deployment/python-api-deployment -n kubeobs
+
+    - name: Notify Backend Status
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_CHAT_ID }}
+        token: ${{ secrets.TELEGRAM_TOKEN }}
+        message: "Успішний деплой KubeOBS API!\nВерсія комміту: ${{ github.sha }}\nГілка: ${{ github.ref_name }}"

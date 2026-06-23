@@ -67,6 +67,7 @@ import java.io.IOException
 @Composable
 fun PodScreen(
     navController: NavController,
+    clusterId: Int,
     viewModel: PodViewModel = viewModel()
 ){
     var displayDialog = remember {mutableStateOf(false)}
@@ -93,21 +94,6 @@ fun PodScreen(
                     }
                 }
             )
-        },
-        bottomBar = {
-            BottomAppBar(
-                containerColor = Color.Transparent,
-                tonalElevation = 0.dp,
-                actions = {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-
-                    }
-                }
-            )
         }
     ) { innerPadding ->
         Column(
@@ -120,7 +106,7 @@ fun PodScreen(
                     OnPodsLoading()
                 }
                 is PodsUIState.SuccessPods ->{
-                    OnPodsSuccess(currentState.data, navController, context)
+                    OnPodsSuccess(currentState.data, navController, clusterId, context)
                 }
                 is PodsUIState.ErrorPods ->{
                     displayDialog.value = true
@@ -150,6 +136,7 @@ fun OnPodsLoading(){
 fun OnPodsSuccess(
     _podsList: PodsResponse?,
     navController: NavController,
+    clusterId: Int,
     context: Context,
     viewModel: PodViewModel = viewModel()
 ) {
@@ -184,10 +171,10 @@ fun OnPodsSuccess(
                                 .height(100.dp)
                                 .fillMaxWidth(),
                             onClick = {
-                                navController.navigate("${Routes.PodHealthScreen}/${podsList.indexOf(podItem)}")
+                                navController.navigate("${Routes.PodHealthScreen}/$clusterId/${podsList.indexOf(podItem)}")
                             },
-                            shape = RoundedCornerShape(15.dp),
-                            border = BorderStroke(2.dp, Color(Colors.kubeColor)),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, Color(Colors.kubeColor)),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.background,
                             )
@@ -196,12 +183,13 @@ fun OnPodsSuccess(
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(start = 10.dp, top = 10.dp)
+                                    modifier = Modifier
+                                        .padding(start = 15.dp, top = 15.dp, end = 15.dp)
                                 ) {
                                     Text(
                                         text = "Pod:",
                                         fontSize = 24.sp,
-                                        fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.Normal,
                                         fontFamily = UbuntuFamily().ubuntuFamily
                                     )
                                     Text(

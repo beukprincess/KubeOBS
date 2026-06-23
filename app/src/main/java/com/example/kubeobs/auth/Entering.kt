@@ -210,6 +210,7 @@ fun EnteringScreen(
                             .height(30.dp)
                     )
                     Button(
+                        shape = RoundedCornerShape(10.dp),
                         colors = ButtonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = Color.White,
@@ -396,6 +397,7 @@ fun EnteringScreen(
                             .height(30.dp)
                     )
                     Button(
+                        shape = RoundedCornerShape(10.dp),
                         colors = ButtonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = Color.White,

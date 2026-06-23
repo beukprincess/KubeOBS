@@ -122,6 +122,7 @@ fun ClustersScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
+                shape = RoundedCornerShape(10.dp),
                 onClick = { viewModel.logOut(context, navController) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
@@ -135,8 +136,8 @@ fun ClustersScreen(
                     text = "Log out",
                     fontFamily = UbuntuFamily().ubuntuFamily,
                     fontSize = 20.sp,
-                    fontWeight=FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight=FontWeight.Normal,
+                    color = Color.White,
                 )
             }
         }
@@ -164,6 +165,7 @@ fun ClustersScreen(
                         modifier = Modifier.height(16.dp)
                     )
                     Button(
+                        shape = RoundedCornerShape(10.dp),
                         onClick = { viewModel.loadClusters(context) },
                         colors = ButtonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -202,6 +204,7 @@ fun ClustersScreen(
                     }
                     FloatingActionButton(
                         onClick = { showAddDialog = true },
+                        shape = RoundedCornerShape(10.dp),
                         containerColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -229,7 +232,7 @@ fun ClusterCard(
         modifier = Modifier
             .height(100.dp)
             .fillMaxWidth(),
-        shape = RoundedCornerShape(15.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(Colors.kubeColor),
             contentColor = Color.White,
@@ -248,16 +251,16 @@ fun ClusterCard(
                     Text(
                         text = "Cluster: ",
                         fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.Normal,
+                        color = Color.White,
                         fontFamily = UbuntuFamily().ubuntuFamily
                     )
                     Text(
                         modifier = Modifier.padding(start=3.dp),
                         text = cluster.name,
                         fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.Normal,
+                        color = Color.White,
                         fontFamily = UbuntuFamily().ubuntuFamily
                     )
                 }
@@ -300,6 +303,7 @@ fun AddClusterDialog(
         },
         confirmButton = {
             Button(
+                shape = RoundedCornerShape(10.dp),
                 colors = ButtonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = Color.White,

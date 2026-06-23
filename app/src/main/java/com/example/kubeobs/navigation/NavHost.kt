@@ -2,7 +2,6 @@ package com.example.kubeobs.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.BlendMode.Companion.Screen
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -35,26 +34,50 @@ fun Navigation(){
             composable(Routes.EnteringScreen){
                 EnteringScreen(navController = navController)
             }
-            composable(Routes.MainScreen){
-                MainScreen(navController = navController)
-            }
-            composable(Routes.PodScreen){
-                PodScreen(navController = navController)
-            }
+
             composable(
-                route = "${Routes.PodHealthScreen}/{podIndex}",
+                route = "${Routes.MainScreen}/{clusterId}",
                 arguments = listOf(
-                    navArgument("podIndex") {
+                    navArgument("clusterId") {
                         type = NavType.IntType
                         nullable = false
                     }
                 )
             ) { backStackEntry ->
-                val passedPodIndex = backStackEntry.arguments?.getInt("podIndex")
-                    ?: throw IllegalArgumentException("podIndex is required")
+                val clusterId = backStackEntry.arguments?.getInt("clusterId")
+                    ?: throw IllegalArgumentException("clusterId is required")
+
+                MainScreen(navController = navController, clusterId = clusterId)
+            }
+
+            composable(
+                route = "${Routes.PodScreen}/{clusterId}",
+                arguments = listOf(
+                    navArgument("clusterId") {
+                        type = NavType.IntType
+                        nullable = false
+                    }
+                )
+            ) { backStackEntry ->
+                val clusterId = backStackEntry.arguments?.getInt("clusterId")
+                    ?: throw IllegalArgumentException("clusterId is required")
+
+                PodScreen(navController = navController, clusterId = clusterId)
+            }
+
+            composable(
+                route = "${Routes.PodHealthScreen}/{clusterId}/{podIndex}",
+                arguments = listOf(
+                    navArgument("clusterId") { type = NavType.IntType; nullable = false },
+                    navArgument("podIndex") { type = NavType.IntType; nullable = false }
+                )
+            ) { backStackEntry ->
+                val passedClusterId = backStackEntry.arguments?.getInt("clusterId") ?: 0
+                val passedPodIndex = backStackEntry.arguments?.getInt("podIndex") ?: 0
 
                 PodHealthScreen(
                     navController = navController,
+                    clusterId = passedClusterId,
                     podIndex = passedPodIndex
                 )
             }
@@ -74,5 +97,6 @@ fun Navigation(){
             composable(Routes.ClustersScreen) {
                 ClustersScreen(navController = navController)
             }
-        })
+        }
+    )
 }

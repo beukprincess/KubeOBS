@@ -1,9 +1,9 @@
 package com.example.kubeobs.data
 
-sealed interface NodesUIState{
-    object LoadingNodes: NodesUIState
-    data class SuccessNodes(val data: NodesResponse?): NodesUIState
-    data class ErrorNodes(val e: String): NodesUIState
+sealed class NodesUIState {
+    object LoadingNodes : NodesUIState()
+    data class SuccessNodes(val data: WsMetricsMessage) : NodesUIState()
+    data class ErrorNodes(val e: String) : NodesUIState()
 }
 sealed interface PodsUIState{
     object LoadingPods: PodsUIState
@@ -23,13 +23,16 @@ sealed interface PodHealthUIState{
 }
 sealed interface MetricsUIState{
     object LoadingMetrics: MetricsUIState
-    data class SuccessMetrics(val data: MetricsResponse?): MetricsUIState
+    data class SuccessMetrics(val data: WsMetricsMessage?): MetricsUIState
     data class ErrorMetrics(val e: String): MetricsUIState
 }
-sealed interface MetricsDataState{
-    object LoadingMetricsData: MetricsDataState
-    data class SuccessMetricsData(val data: MetricsResponse?): MetricsDataState
-    data class ErrorMetricsData(val e: String): MetricsDataState
+sealed class MetricsDataState {
+    object LoadingMetricsData : MetricsDataState()
+    data class SuccessMetricsData(
+        val data: WsMetricsMessage?,
+        val receivedAt: Long = System.currentTimeMillis()
+    ) : MetricsDataState()
+    data class ErrorMetricsData(val e: String) : MetricsDataState()
 }
 sealed interface RegResultState {
     object IdleResult : RegResultState
